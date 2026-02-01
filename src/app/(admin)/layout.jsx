@@ -15,6 +15,7 @@ import {
   Search,
   Moon,
   Sun,
+  Wallet,
 } from "lucide-react";
 
 // Import the global CSS in your root layout or _app.js:
@@ -34,6 +35,12 @@ export default function AdminLayout({ children }) {
     { name: "Manage Users", href: "/all-users", icon: <Users size={20} /> },
     { name: "Binary Tree", href: "/admin-tree", icon: <Network size={20} /> },
     { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
+    { name: "Bonus Logs", href: "/bonus-logs", icon: <Wallet size={20} /> },
+    {
+      name: "Withdraws",
+      href: "/withdrawls",
+      icon: <Wallet size={20} />,
+    },
   ];
 
   return (

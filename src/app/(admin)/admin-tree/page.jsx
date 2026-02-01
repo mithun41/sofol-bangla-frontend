@@ -1,13 +1,15 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import api from "@/services/api";
 
-const TreeNode = ({ node, level = 0 }) => {
+const TreeNode = ({ node, onNodeClick }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   if (!node) {
     return (
-      <div className="flex flex-col items-center mt-4">
-        <div className="w-12 h-12 rounded-full border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50 text-[10px] text-gray-400">
-          Empty
+      <div className="flex flex-col items-center mt-2 opacity-30">
+        <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
+          <span className="text-[6px] text-gray-400">-</span>
         </div>
       </div>
     );
@@ -15,103 +17,243 @@ const TreeNode = ({ node, level = 0 }) => {
 
   return (
     <div className="flex flex-col items-center">
-      <div
-        className={`w-14 h-14 rounded-full flex flex-col items-center justify-center text-white shadow-lg ${node.status === "active" ? "bg-green-500" : "bg-red-400"}`}
-      >
-        <span className="text-[10px] font-bold">{node.username}</span>
-        <span className="text-[8px] opacity-80">{node.placement_id}</span>
+      {/* Compact User Node with Individual Hover Tooltip */}
+      <div className="relative">
+        <div
+          onClick={() => onNodeClick(node.username)}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+          className={`w-9 h-9 rounded-full flex flex-col items-center justify-center text-white shadow-md cursor-pointer transform hover:scale-125 transition-transform duration-150 border-2 relative ${
+            node.status === "active"
+              ? "bg-emerald-500 border-emerald-200"
+              : "bg-rose-400 border-rose-200"
+          }`}
+        >
+          <span className="text-[7px] font-bold leading-none">
+            {node.username.slice(0, 4)}
+          </span>
+          <span className="text-[5px] opacity-70 leading-none mt-0.5">
+            {node.placement_id}
+          </span>
+        </div>
+
+        {/* Hover Tooltip - শুধুমাত্র এই node এ hover করলে দেখাবে */}
+        {isHovered && (
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[10px] rounded whitespace-nowrap z-50 shadow-lg animate-fadeIn">
+            <div className="font-bold">{node.username}</div>
+            <div className="text-[8px] opacity-80">ID: {node.placement_id}</div>
+            <div className="text-[8px] opacity-80">
+              Status: {node.status === "active" ? "✓ Active" : "✗ Inactive"}
+            </div>
+            {/* Tooltip Arrow */}
+            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
+          </div>
+        )}
       </div>
 
-      {level < 2 && (
-        <div className="flex gap-8 mt-8 relative">
-          <div className="absolute top-[-20px] left-1/2 w-[80%] h-[2px] bg-gray-200 -translate-x-1/2"></div>
-          <TreeNode node={node.left} level={level + 1} />
-          <TreeNode node={node.right} level={level + 1} />
+      {/* Children Container - Very Compact */}
+      {(node.left || node.right) && (
+        <div className="flex gap-2 md:gap-4 mt-4 relative">
+          {/* Connecting Line - Thinner */}
+          <div className="absolute top-[-8px] left-1/2 w-[50%] h-[1px] bg-gray-300 -translate-x-1/2"></div>
+
+          {/* Left Branch */}
+          <div className="relative">
+            <div className="absolute top-[-8px] left-1/2 w-[1px] h-[8px] bg-gray-300"></div>
+            <TreeNode node={node.left} onNodeClick={onNodeClick} />
+          </div>
+
+          {/* Right Branch */}
+          <div className="relative">
+            <div className="absolute top-[-8px] left-1/2 w-[1px] h-[8px] bg-gray-300"></div>
+            <TreeNode node={node.right} onNodeClick={onNodeClick} />
+          </div>
         </div>
       )}
     </div>
   );
 };
 
-export default function TreeViewPage() {
+// Recursive function to fetch complete tree
+const fetchCompleteTree = async (username) => {
+  if (!username) return null;
+
+  try {
+    const res = await api.get(`accounts/tree/${username}/`);
+    const node = res.data;
+
+    if (node) {
+      const [leftTree, rightTree] = await Promise.all([
+        node.left?.username
+          ? fetchCompleteTree(node.left.username)
+          : Promise.resolve(null),
+        node.right?.username
+          ? fetchCompleteTree(node.right.username)
+          : Promise.resolve(null),
+      ]);
+
+      return {
+        ...node,
+        left: leftTree,
+        right: rightTree,
+      };
+    }
+
+    return node;
+  } catch (err) {
+    console.error(`Error fetching tree for ${username}:`, err);
+    return null;
+  }
+};
+
+export default function CompactFullTreeView() {
   const [treeData, setTreeData] = useState(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState(""); // Error message state
+  const [errorMessage, setErrorMessage] = useState("");
+  const [totalNodes, setTotalNodes] = useState(0);
+  const [zoom, setZoom] = useState(100);
 
-  const fetchTree = async () => {
-    // 1. Faka search handle kora
-    if (!search.trim()) {
+  const countNodes = (node) => {
+    if (!node) return 0;
+    return 1 + countNodes(node.left) + countNodes(node.right);
+  };
+
+  const fetchTree = async (username) => {
+    const targetUser = username || search;
+    if (!targetUser.trim()) {
       setErrorMessage("Please enter a username.");
-      setTreeData(null);
       return;
     }
 
     setLoading(true);
-    setErrorMessage(""); // Purono error muche fela
+    setErrorMessage("");
+    setTreeData(null);
 
     try {
-      const res = await api.get(`accounts/tree/${search}/`);
-      setTreeData(res.data);
+      const completeTree = await fetchCompleteTree(targetUser);
+      setTreeData(completeTree);
+      setTotalNodes(countNodes(completeTree));
+      setSearch(targetUser);
     } catch (err) {
-      // 2. 404 ba onno error handle kora
       setTreeData(null);
-      if (err.response && err.response.status === 404) {
-        setErrorMessage("User not found! Please check the username.");
-      } else {
-        setErrorMessage("Something went wrong. Please try again.");
-      }
+      setErrorMessage(
+        err.response?.status === 404
+          ? "User not found!"
+          : "Something went wrong.",
+      );
     } finally {
       setLoading(false);
     }
   };
 
-  // Initial load-e faka call bondho kora
-  useEffect(() => {
-    if (search) fetchTree();
-  }, []);
-
   return (
-    <div className="p-10 bg-white min-h-screen overflow-auto">
-      <div className="mb-10 flex flex-col items-center">
-        <div className="flex gap-4">
+    <div className="p-2 md:p-4 bg-slate-50 min-h-screen overflow-auto">
+      <style jsx>{`
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translate(-50%, -4px);
+          }
+          to {
+            opacity: 1;
+            transform: translate(-50%, 0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.15s ease-out;
+        }
+      `}</style>
+
+      <div className="max-w-full mx-auto flex flex-col items-center">
+        {/* Compact Search Header */}
+        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap gap-2 mb-4">
           <input
             type="text"
-            placeholder="Enter Username"
-            className="border p-2 rounded text-black outline-none focus:ring-2 focus:ring-indigo-500"
+            placeholder="Username..."
+            className="border border-slate-200 p-2 rounded-lg text-black text-sm outline-none focus:border-indigo-500 w-36 md:w-48"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchTree()} // Enter press korle search hobe
+            onKeyDown={(e) => e.key === "Enter" && fetchTree()}
           />
           <button
-            onClick={fetchTree}
+            onClick={() => fetchTree()}
             disabled={loading}
-            className="bg-indigo-600 text-white px-6 py-2 rounded hover:bg-indigo-700 disabled:bg-gray-400 transition-colors"
+            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
           >
-            {loading ? "Searching..." : "Search Tree"}
+            {loading ? "Loading..." : "Load Tree"}
           </button>
+
+          {/* Zoom Controls */}
+          {treeData && (
+            <div className="flex items-center gap-2 border-l pl-2 ml-2">
+              <button
+                onClick={() => setZoom(Math.max(50, zoom - 10))}
+                className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+              >
+                -
+              </button>
+              <span className="text-xs text-slate-600 w-10 text-center">
+                {zoom}%
+              </span>
+              <button
+                onClick={() => setZoom(Math.min(150, zoom + 10))}
+                className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+              >
+                +
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* 3. Error Message UI */}
+        {/* Compact Loading */}
+        {loading && (
+          <div className="mb-3 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
+            <p className="text-indigo-600 text-xs font-semibold animate-pulse">
+              🌳 Loading{" "}
+              {totalNodes > 0 ? `(${totalNodes} nodes so far)` : "tree"}...
+            </p>
+          </div>
+        )}
+
         {errorMessage && (
-          <div className="mt-4 p-3 bg-red-100 border border-red-400 text-red-700 rounded-md">
+          <p className="mb-3 text-rose-500 text-xs font-semibold bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">
             {errorMessage}
+          </p>
+        )}
+
+        {/* Compact Stats */}
+        {treeData && !loading && (
+          <div className="mb-3 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
+            <p className="text-emerald-700 text-xs font-semibold">
+              ✅ Total:{" "}
+              <span className="text-emerald-900 font-black">{totalNodes}</span>{" "}
+              nodes
+              <span className="ml-3 text-slate-500">
+                💡 Hover on nodes to see full details
+              </span>
+            </p>
+          </div>
+        )}
+
+        {/* Compact Tree Canvas with Zoom */}
+        {treeData && (
+          <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-4 overflow-auto">
+            <div
+              className="inline-block min-w-full"
+              style={{
+                transform: `scale(${zoom / 100})`,
+                transformOrigin: "top center",
+                transition: "transform 0.2s",
+              }}
+            >
+              <div className="flex justify-center py-4">
+                <TreeNode node={treeData} onNodeClick={fetchTree} />
+              </div>
+            </div>
           </div>
         )}
       </div>
-
-      {treeData ? (
-        <div className="flex justify-center min-w-[800px] mt-10">
-          <TreeNode node={treeData} />
-        </div>
-      ) : (
-        !loading &&
-        !errorMessage && (
-          <p className="text-center text-gray-400 mt-10">
-            Search for a user to visualize the tree.
-          </p>
-        )
-      )}
     </div>
   );
 }

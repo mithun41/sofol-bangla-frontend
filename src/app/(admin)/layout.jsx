@@ -32,7 +32,7 @@ export default function AdminLayout({ children }) {
       href: "/admin-dashboard",
       icon: <LayoutDashboard size={20} />,
     },
-    { name: "Manage Users", href: "/all-users", icon: <Users size={20} /> },
+    { name: "Manage Users", href: "/manage-users", icon: <Users size={20} /> },
     { name: "Binary Tree", href: "/admin-tree", icon: <Network size={20} /> },
     { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
     { name: "Bonus Logs", href: "/bonus-logs", icon: <Wallet size={20} /> },

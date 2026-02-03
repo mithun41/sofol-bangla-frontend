@@ -2,6 +2,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { useAuth } from "@/context/AuthContext"; // আপনার AuthContext ইমপোর্ট করুন
 import {
   LayoutDashboard,
   Users,
@@ -16,15 +17,27 @@ import {
   Moon,
   Sun,
   Wallet,
+  Package,
+  Layers,
 } from "lucide-react";
-
-// Import the global CSS in your root layout or _app.js:
-// import './admin-dashboard.css'
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
+  const { user, logout } = useAuth(); // AuthContext থেকে ডাটা নিন
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+
+  // ইউজার নেমের আদ্যক্ষর (Initials) বের করার জন্য
+  const getInitials = (name) => {
+    return name
+      ? name
+          .split(" ")
+          .map((n) => n[0])
+          .join("")
+          .toUpperCase()
+          .slice(0, 2)
+      : "AD";
+  };
 
   const menuItems = [
     {
@@ -33,14 +46,20 @@ export default function AdminLayout({ children }) {
       icon: <LayoutDashboard size={20} />,
     },
     { name: "Manage Users", href: "/manage-users", icon: <Users size={20} /> },
-    { name: "Binary Tree", href: "/admin-tree", icon: <Network size={20} /> },
-    { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
-    { name: "Bonus Logs", href: "/bonus-logs", icon: <Wallet size={20} /> },
     {
-      name: "Withdraws",
-      href: "/withdrawls",
-      icon: <Wallet size={20} />,
+      name: "Manage Products",
+      href: "/products",
+      icon: <Package size={20} />,
     },
+    {
+      name: "Categories",
+      href: "/categories",
+      icon: <Layers size={20} />,
+    },
+    { name: "Binary Tree", href: "/admin-tree", icon: <Network size={20} /> },
+    { name: "Bonus Logs", href: "/bonus-logs", icon: <Wallet size={20} /> },
+    { name: "Withdrawals", href: "/withdrawls", icon: <Wallet size={20} /> },
+    { name: "Settings", href: "/settings", icon: <Settings size={20} /> },
   ];
 
   return (
@@ -63,7 +82,7 @@ export default function AdminLayout({ children }) {
           {/* Logo Section */}
           <div className="h-20 px-6 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
             <div className="flex items-center gap-3">
-              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg shadow-blue-500/30 dark:shadow-blue-500/20">
+              <div className="w-10 h-10 bg-gradient-to-br from-blue-600 via-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center shadow-lg">
                 <span className="text-white font-black text-lg italic">SB</span>
               </div>
               <div>
@@ -77,82 +96,57 @@ export default function AdminLayout({ children }) {
             </div>
             <button
               onClick={() => setSidebarOpen(false)}
-              className="md:hidden text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+              className="md:hidden text-slate-400"
             >
               <X size={24} />
             </button>
           </div>
 
-          {/* Search Bar */}
-          <div className="p-4">
-            <div className="relative">
-              <Search
-                className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
-                size={18}
-              />
-              <input
-                type="text"
-                placeholder="Search..."
-                className="w-full pl-10 pr-4 py-2.5 bg-slate-100 dark:bg-slate-800/50 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-700 dark:text-slate-300 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/50 focus:border-blue-500 transition-all"
-              />
-            </div>
-          </div>
-
           {/* Navigation */}
-          <nav className="flex-1 px-4 space-y-1 overflow-y-auto pb-6">
-            <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest px-3 mb-3 mt-2">
+          <nav className="flex-1 px-4 space-y-1 overflow-y-auto pt-4">
+            <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest px-3 mb-3">
               Main Menu
             </p>
-            {menuItems.map((item, index) => {
+            {menuItems.map((item) => {
               const isActive = pathname === item.href;
               return (
                 <Link
                   key={item.name}
                   href={item.href}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 group relative overflow-hidden ${
+                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                     isActive
-                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg shadow-blue-500/30"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50 hover:text-slate-900 dark:hover:text-white"
+                      ? "bg-gradient-to-r from-blue-600 to-indigo-600 text-white shadow-lg"
+                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/50"
                   }`}
-                  style={{
-                    animationDelay: `${index * 50}ms`,
-                  }}
                 >
-                  {isActive && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-blue-400/20 to-indigo-400/20 animate-pulse" />
-                  )}
-                  <span className="relative z-10">{item.icon}</span>
-                  <span className="font-semibold text-sm relative z-10">
-                    {item.name}
-                  </span>
-                  {isActive && (
-                    <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white animate-pulse" />
-                  )}
+                  {item.icon}
+                  <span className="font-semibold text-sm">{item.name}</span>
                 </Link>
               );
             })}
           </nav>
 
-          {/* User Profile Card */}
+          {/* User Profile Card (Dynamic Data) */}
           <div className="p-4 border-t border-slate-200 dark:border-slate-800">
-            <div className="bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-4 mb-3">
+            <div className="bg-gradient-to-br from-slate-100 to-slate-50 dark:from-slate-800 dark:to-slate-900 rounded-2xl p-4">
               <div className="flex items-center gap-3 mb-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg shadow-blue-500/30">
-                  MD
+                <div className="w-12 h-12 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold text-lg shadow-lg">
+                  {getInitials(user?.name)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                    Mithun Dev
+                    {user?.name || "Admin"}
                   </p>
-                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium">
-                    Super Admin
+                  <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium capitalize">
+                    {user?.role || "Super Admin"}
                   </p>
                 </div>
-                <ChevronDown size={16} className="text-slate-400" />
               </div>
-              <div className="h-px bg-slate-200 dark:bg-slate-700 mb-3" />
-              <button className="flex items-center gap-2 w-full text-sm text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors group">
+              <button
+                onClick={logout}
+                className="flex items-center gap-2 w-full text-sm text-slate-600 dark:text-slate-400 hover:text-red-600 dark:hover:text-red-400 transition-colors"
+              >
                 <LogOut size={16} />
                 <span className="font-medium">Logout</span>
               </button>
@@ -160,107 +154,66 @@ export default function AdminLayout({ children }) {
           </div>
         </aside>
 
-        {/* Main Content */}
+        {/* Main Content Area */}
         <div className="flex-1 md:ml-72 flex flex-col min-h-screen">
-          {/* Header */}
-          <header className="h-20 bg-white/80 dark:bg-[#0f1419]/80 backdrop-blur-xl sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800 transition-colors duration-300">
-            <div className="h-full px-4 sm:px-6 lg:px-8 flex items-center justify-between">
-              {/* Left Section */}
+          <header className="h-20 bg-white/80 dark:bg-[#0f1419]/80 backdrop-blur-xl sticky top-0 z-30 border-b border-slate-200 dark:border-slate-800">
+            <div className="h-full px-4 sm:px-8 flex items-center justify-between">
               <div className="flex items-center gap-4">
                 <button
                   onClick={() => setSidebarOpen(true)}
-                  className="md:hidden text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors p-2 -ml-2"
+                  className="md:hidden text-slate-600"
                 >
                   <Menu size={24} />
                 </button>
-                <div className="hidden sm:block">
-                  <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-0.5">
-                    Pages / {pathname.replace("/", "") || "Dashboard"}
+                <div>
+                  <p className="text-xs font-medium text-slate-500">
+                    Pages / {pathname.replace("/", "")}
                   </p>
                   <h1 className="text-xl font-bold text-slate-800 dark:text-white">
-                    Welcome Back, Admin
+                    Dashboard Overview
                   </h1>
                 </div>
-                <h1 className="text-lg font-bold text-slate-800 dark:text-white sm:hidden">
-                  Dashboard
-                </h1>
               </div>
 
-              {/* Right Section */}
-              <div className="flex items-center gap-3 sm:gap-6">
-                {/* Theme Toggle */}
+              <div className="flex items-center gap-4">
+                {/* Dark Mode Toggle */}
                 <button
                   onClick={() => setDarkMode(!darkMode)}
-                  className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center hover:scale-105"
+                  className="p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl"
                 >
-                  {darkMode ? <Sun size={20} /> : <Moon size={20} />}
+                  {darkMode ? (
+                    <Sun size={20} className="text-yellow-500" />
+                  ) : (
+                    <Moon size={20} />
+                  )}
                 </button>
 
                 {/* Notifications */}
-                <button className="relative w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-all flex items-center justify-center hover:scale-105">
+                <button className="relative p-2.5 bg-slate-100 dark:bg-slate-800 rounded-xl">
                   <Bell size={20} />
-                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-gradient-to-br from-red-500 to-red-600 text-white text-[10px] font-bold flex items-center justify-center rounded-full border-2 border-white dark:border-[#0f1419] shadow-lg">
-                    3
-                  </span>
+                  <span className="absolute top-0 right-0 w-4 h-4 bg-red-500 rounded-full border-2 border-white dark:border-slate-900" />
                 </button>
 
-                {/* Divider (hidden on mobile) */}
-                <div className="hidden sm:block h-8 w-px bg-slate-200 dark:bg-slate-700" />
-
-                {/* User Avatar (hidden on mobile in favor of menu button) */}
-                <div className="hidden sm:flex items-center gap-3">
-                  <div className="text-right hidden lg:block">
-                    <p className="text-sm font-bold text-slate-800 dark:text-white leading-none">
-                      Mithun Dev
+                <div className="hidden sm:flex items-center gap-3 ml-2">
+                  <div className="text-right">
+                    <p className="text-sm font-bold dark:text-white">
+                      {user?.name}
                     </p>
-                    <p className="text-xs text-emerald-600 dark:text-emerald-400 font-medium mt-0.5">
-                      Super Admin
+                    <p className="text-[10px] text-emerald-500 font-bold uppercase tracking-tighter">
+                      Online
                     </p>
                   </div>
-                  <div className="w-11 h-11 bg-gradient-to-br from-blue-600 to-indigo-600 rounded-xl flex items-center justify-center text-white font-bold shadow-lg shadow-blue-500/30 hover:scale-105 transition-transform cursor-pointer">
-                    MD
+                  <div className="w-10 h-10 bg-blue-600 rounded-xl flex items-center justify-center text-white font-bold">
+                    {getInitials(user?.name)}
                   </div>
                 </div>
               </div>
             </div>
           </header>
 
-          {/* Content Area */}
-          <main className="flex-1 p-4 sm:p-6 lg:p-8">
-            <div className="animate-in fade-in slide-in-from-bottom-4 duration-500">
-              {children}
-            </div>
+          <main className="flex-1 p-4 sm:p-8 overflow-x-hidden">
+            {children}
           </main>
-
-          {/* Footer */}
-          <footer className="py-6 px-4 sm:px-6 lg:px-8 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f1419] transition-colors duration-300">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4 text-sm text-slate-600 dark:text-slate-400">
-              <p>
-                © 2025 <span className="font-semibold">Sofol Bangla</span>. All
-                rights reserved.
-              </p>
-              <div className="flex items-center gap-6">
-                <a
-                  href="#"
-                  className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                >
-                  Privacy Policy
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                >
-                  Terms of Service
-                </a>
-                <a
-                  href="#"
-                  className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                >
-                  Support
-                </a>
-              </div>
-            </div>
-          </footer>
         </div>
       </div>
     </div>

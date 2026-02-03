@@ -1,13 +1,16 @@
 import Navbar from "@/components/Navbar";
+import { AuthProvider } from "@/context/AuthContext";
+import "../../app/globals.css";
 
-export default function PublicLayout({ children }) {
+export default function RootLayout({ children }) {
   return (
-    <>
-      <Navbar />
-      <main>{children}</main>
-      <footer className="p-10 bg-gray-50 text-center border-t">
-        © 2026 Your Company
-      </footer>
-    </>
+    <html lang="en">
+      <body>
+        <AuthProvider>
+          <Navbar />
+          {children}
+        </AuthProvider>
+      </body>
+    </html>
   );
 }

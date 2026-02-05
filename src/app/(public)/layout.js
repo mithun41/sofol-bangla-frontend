@@ -1,16 +1,15 @@
 import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
 import "../../app/globals.css";
+import { CartProvider } from "@/context/CartContext";
 
 export default function RootLayout({ children }) {
   return (
-    <html lang="en">
-      <body>
-        <AuthProvider>
-          <Navbar />
-          {children}
-        </AuthProvider>
-      </body>
-    </html>
+    <CartProvider>
+      <AuthProvider>
+        <Navbar />
+        {children}
+      </AuthProvider>
+    </CartProvider>
   );
 }

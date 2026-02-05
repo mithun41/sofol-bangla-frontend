@@ -2,7 +2,8 @@
 import React, { useState, useRef, useEffect } from "react";
 import Link from "next/link";
 import { useAuth } from "@/context/AuthContext";
-import { usePathname } from "next/navigation"; // একটিভ লিঙ্ক দেখানোর জন্য
+import { useCart } from "@/context/CartContext"; // CartContext ইমপোর্ট করুন
+import { usePathname } from "next/navigation";
 import {
   ChevronDown,
   LayoutDashboard,
@@ -10,17 +11,21 @@ import {
   User as UserIcon,
   Menu,
   X,
-  ShoppingBag, // শপ আইকন
+  ShoppingBag,
+  ShoppingCart, // কার্ট আইকন
 } from "lucide-react";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
+  const { cart } = useCart(); // কার্ট ডাটা নিয়ে আসা
   const [isProfileOpen, setIsProfileOpen] = useState(false);
-  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false); // মোবাইল মেনু স্টেট
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const dropdownRef = useRef(null);
   const pathname = usePathname();
 
-  // নেভিগেশন আইটেমস
+  // কার্টে মোট কয়টি আইটেম আছে তা ক্যালকুলেট করা
+  const cartItemCount = cart.reduce((total, item) => total + item.quantity, 0);
+
   const navLinks = [
     { name: "Home", href: "/" },
     { name: "Shop", href: "/shop", icon: <ShoppingBag size={18} /> },
@@ -36,7 +41,6 @@ export default function Navbar() {
     return () => document.removeEventListener("mousedown", handleClick);
   }, []);
 
-  // লিঙ্ক একটিভ আছে কিনা চেক করার ফাংশন
   const isActive = (path) => pathname === path;
 
   return (
@@ -52,7 +56,6 @@ export default function Navbar() {
               SOFOL BANGLA
             </Link>
 
-            {/* Desktop Menu */}
             <div className="hidden md:flex items-center gap-8">
               {navLinks.map((link) => (
                 <Link
@@ -72,7 +75,24 @@ export default function Navbar() {
           </div>
 
           {/* Right Actions */}
-          <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2 sm:gap-4">
+            {/* --- CART ICON START --- */}
+            <Link
+              href="/cart"
+              className="relative p-2 text-gray-600 hover:bg-gray-100 rounded-full transition-all group"
+            >
+              <ShoppingCart
+                size={22}
+                className="group-hover:text-blue-600 transition-colors"
+              />
+              {cartItemCount > 0 && (
+                <span className="absolute top-0 right-0 bg-red-500 text-white text-[10px] font-bold w-5 h-5 flex items-center justify-center rounded-full border-2 border-white animate-in zoom-in">
+                  {cartItemCount}
+                </span>
+              )}
+            </Link>
+            {/* --- CART ICON END --- */}
+
             {user ? (
               <div className="relative" ref={dropdownRef}>
                 <button
@@ -137,14 +157,13 @@ export default function Navbar() {
                 </Link>
                 <Link
                   href="/register"
-                  className="bg-blue-600 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-blue-700 shadow-lg shadow-blue-100 transition"
+                  className="bg-blue-600 text-white text-sm font-bold px-6 py-2.5 rounded-full hover:bg-blue-700 shadow-lg transition"
                 >
                   Join Now
                 </Link>
               </div>
             )}
 
-            {/* Mobile Menu Toggle */}
             <button
               onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
               className="p-2 md:hidden text-gray-600 hover:bg-gray-100 rounded-xl transition"
@@ -163,21 +182,33 @@ export default function Navbar() {
               key={link.href}
               href={link.href}
               onClick={() => setIsMobileMenuOpen(false)}
-              className={`flex items-center gap-3 p-4 rounded-xl font-bold ${
-                isActive(link.href)
-                  ? "bg-blue-50 text-blue-600"
-                  : "text-gray-600"
-              }`}
+              className={`flex items-center gap-3 p-4 rounded-xl font-bold ${isActive(link.href) ? "bg-blue-50 text-blue-600" : "text-gray-600"}`}
             >
               {link.icon && link.icon}
               {link.name}
             </Link>
           ))}
+          {/* Mobile Cart Link */}
+          <Link
+            href="/cart"
+            onClick={() => setIsMobileMenuOpen(false)}
+            className="flex items-center justify-between p-4 rounded-xl font-bold text-gray-600"
+          >
+            <div className="flex items-center gap-3">
+              <ShoppingCart size={18} /> My Cart
+            </div>
+            {cartItemCount > 0 && (
+              <span className="bg-blue-600 text-white px-2 py-0.5 rounded-full text-xs">
+                {cartItemCount}
+              </span>
+            )}
+          </Link>
+
           {!user && (
             <div className="grid grid-cols-2 gap-3 pt-4">
               <Link
                 href="/login"
-                className="text-center p-3 text-sm font-bold text-gray-600 border border-gray-100 rounded-xl"
+                className="text-center p-3 text-sm font-bold text-gray-600 border rounded-xl"
               >
                 Sign In
               </Link>

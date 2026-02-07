@@ -46,7 +46,7 @@ export default function UserLayout({ children }) {
     { name: "My Tree", href: "/dashboard/my-tree", icon: TrendingUp },
     { name: "Withdraw", href: "/dashboard/withdraw", icon: Wallet },
     { name: "Bonus-Logs", href: "/dashboard/bonus-logs", icon: Users },
-    { name: "Notifications", href: "/dashboard/notifications", icon: Bell },
+    { name: "my-orders", href: "/dashboard/user-order", icon: Bell },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 

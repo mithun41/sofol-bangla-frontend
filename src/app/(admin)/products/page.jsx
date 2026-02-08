@@ -7,9 +7,14 @@ import {
   Package,
   Search,
   Loader2,
-  AlertCircle,
+  Star, // Featured এর জন্য
 } from "lucide-react";
-import { getAllProducts, deleteProduct } from "@/services/productService";
+// productService এ updateProduct ফাংশনটি থাকতে হবে
+import {
+  getAllProducts,
+  deleteProduct,
+  updateProduct,
+} from "@/services/productService";
 import AddProductModal from "../components/AddProductModal";
 import EditProductModal from "../components/EditProductModal";
 import toast, { Toaster } from "react-hot-toast";
@@ -22,15 +27,13 @@ export default function ManageProducts() {
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
 
-  // প্রোডাক্ট লোড করার ফাংশন
   const loadProducts = async () => {
     try {
       setLoading(true);
       const res = await getAllProducts();
-      setProducts(res.data);
+      setProducts(Array.isArray(res.data) ? res.data : res.data.results);
     } catch (err) {
-      console.error("Failed to load products");
-      toast.error("Could not load products from server");
+      toast.error("Could not load products");
     } finally {
       setLoading(false);
     }
@@ -40,27 +43,41 @@ export default function ManageProducts() {
     loadProducts();
   }, []);
 
-  // ডিলিট হ্যান্ডলার
+  // --- Featured Toggle Logic ---
+  const toggleFeatured = async (product) => {
+    const newStatus = !product.is_featured;
+    // UI দ্রুত আপডেট করার জন্য (Optimistic Update)
+    const updatedProducts = products.map((p) =>
+      p.id === product.id ? { ...p, is_featured: newStatus } : p,
+    );
+    setProducts(updatedProducts);
+
+    try {
+      // ব্যাকএন্ডে আপডেট পাঠানো
+      await updateProduct(product.id, { is_featured: newStatus });
+      toast.success(newStatus ? "Added to Featured" : "Removed from Featured", {
+        icon: "⭐",
+        duration: 2000,
+      });
+    } catch (err) {
+      // এরর হলে আগের অবস্থায় ফিরিয়ে নেওয়া
+      setProducts(products);
+      toast.error("Failed to update featured status");
+    }
+  };
+
   const handleDelete = async (id) => {
-    if (confirm("Are you sure you want to delete this product?")) {
-      const loadingToast = toast.loading("Deleting product...");
+    if (confirm("Are you sure?")) {
       try {
         await deleteProduct(id);
         setProducts(products.filter((p) => p.id !== id));
-        toast.success("Product deleted successfully", { id: loadingToast });
+        toast.success("Product deleted");
       } catch (err) {
-        toast.error("Failed to delete product", { id: loadingToast });
+        toast.error("Delete failed");
       }
     }
   };
 
-  // এডিট মোডাল ওপেন
-  const handleEditClick = (product) => {
-    setSelectedProduct(product);
-    setIsEditModalOpen(true);
-  };
-
-  // সার্চ ফিল্টারিং
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
@@ -69,57 +86,57 @@ export default function ManageProducts() {
     <div className="space-y-6">
       <Toaster position="top-right" />
 
-      {/* Page Header */}
+      {/* Header Section */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
             <Package className="text-blue-600" /> Inventory Management
           </h1>
           <p className="text-sm text-slate-500">
-            Total {products.length} products available
+            Total {products.length} products
           </p>
         </div>
         <button
           onClick={() => setIsModalOpen(true)}
-          className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-lg shadow-blue-500/25 active:scale-95"
+          className="bg-blue-600 text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:bg-blue-700 transition-all shadow-lg shadow-blue-500/20"
         >
-          <Plus size={20} /> Add New Product
+          <Plus size={20} /> Add New
         </button>
       </div>
 
       {/* Search Bar */}
-      <div className="bg-white dark:bg-[#0f1419] p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
-        <div className="relative w-full md:w-96">
+      <div className="bg-white dark:bg-slate-900 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm">
+        <div className="relative max-w-md">
           <Search
             className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400"
             size={18}
           />
           <input
             type="text"
-            placeholder="Search by name..."
-            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none transition-all"
+            placeholder="Search products..."
+            className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl outline-none"
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
           />
         </div>
       </div>
 
-      {/* Table Container */}
-      <div className="bg-white dark:bg-[#0f1419] rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
+      {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 overflow-hidden shadow-sm">
         <div className="overflow-x-auto">
-          <table className="w-full text-left border-collapse">
+          <table className="w-full text-left">
             <thead className="bg-slate-50 dark:bg-slate-800/50 border-b dark:border-slate-800">
               <tr>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Featured
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                   Product Info
                 </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">
-                  Category
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Price & Point
                 </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider">
-                  Price & Reward
-                </th>
-                <th className="px-6 py-4 text-xs font-bold uppercase text-slate-500 tracking-wider text-right">
+                <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">
                   Actions
                 </th>
               </tr>
@@ -127,70 +144,69 @@ export default function ManageProducts() {
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="px-6 py-20 text-center">
-                    <div className="flex flex-col items-center gap-2">
-                      <Loader2
-                        className="animate-spin text-blue-600"
-                        size={40}
-                      />
-                      <p className="text-sm text-slate-500 font-medium">
-                        Fetching inventory...
-                      </p>
-                    </div>
+                  <td colSpan="4" className="py-20 text-center">
+                    <Loader2 className="animate-spin mx-auto text-blue-600" />
                   </td>
                 </tr>
-              ) : filteredProducts.length > 0 ? (
+              ) : (
                 filteredProducts.map((p) => (
                   <tr
                     key={p.id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-colors group"
+                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all"
                   >
+                    {/* --- Featured Toggle Star --- */}
+                    <td className="px-6 py-4">
+                      <button
+                        onClick={() => toggleFeatured(p)}
+                        className={`transition-all transform hover:scale-125 ${p.is_featured ? "text-amber-400" : "text-slate-300 dark:text-slate-700 hover:text-amber-200"}`}
+                      >
+                        <Star
+                          size={22}
+                          fill={p.is_featured ? "currentColor" : "none"}
+                        />
+                      </button>
+                    </td>
+
                     <td className="px-6 py-4">
                       <div className="flex items-center gap-3">
-                        <div className="relative w-12 h-12 rounded-lg overflow-hidden bg-slate-100 border border-slate-200 dark:border-slate-700">
-                          <img
-                            src={p.image || "/placeholder-product.png"}
-                            alt={p.name}
-                            className="w-full h-full object-cover transition-transform group-hover:scale-110"
-                          />
-                        </div>
-                        <div className="flex flex-col">
-                          <span className="font-bold text-slate-800 dark:text-slate-200 line-clamp-1">
+                        <img
+                          src={p.image}
+                          className="w-10 h-10 rounded-lg object-cover bg-slate-100"
+                        />
+                        <div>
+                          <p className="font-bold text-slate-800 dark:text-white text-sm line-clamp-1">
                             {p.name}
-                          </span>
-                          <span className="text-[10px] text-slate-400 font-medium uppercase tracking-tight">
-                            Stock: {p.stock || 0}
-                          </span>
+                          </p>
+                          <p className="text-[10px] text-slate-400 uppercase font-bold">
+                            {p.category_name || "General"}
+                          </p>
                         </div>
                       </div>
                     </td>
-                    <td className="px-6 py-4 text-sm font-medium text-slate-600 dark:text-slate-400">
-                      <span className="bg-slate-100 dark:bg-slate-800 px-2.5 py-1 rounded-md">
-                        {p.category_name || "General"}
-                      </span>
-                    </td>
+
                     <td className="px-6 py-4">
-                      <div className="font-black text-slate-800 dark:text-white">
+                      <p className="font-black text-slate-800 dark:text-white">
                         ৳{Math.floor(p.price)}
-                      </div>
-                      <div className="text-[10px] font-bold text-emerald-500 flex items-center gap-1">
-                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-                        {p.point_value} PV REWARD
-                      </div>
+                      </p>
+                      <p className="text-[10px] font-bold text-emerald-500">
+                        {p.point_value} PV Reward
+                      </p>
                     </td>
+
                     <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-1">
+                      <div className="flex justify-end gap-2">
                         <button
-                          onClick={() => handleEditClick(p)}
+                          onClick={() => {
+                            setSelectedProduct(p);
+                            setIsEditModalOpen(true);
+                          }}
                           className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                          title="Edit Product"
                         >
                           <Edit size={18} />
                         </button>
                         <button
                           onClick={() => handleDelete(p.id)}
                           className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                          title="Delete Product"
                         >
                           <Trash2 size={18} />
                         </button>
@@ -198,36 +214,20 @@ export default function ManageProducts() {
                     </td>
                   </tr>
                 ))
-              ) : (
-                <tr>
-                  <td colSpan="4" className="px-6 py-16 text-center">
-                    <div className="flex flex-col items-center gap-3 opacity-40">
-                      <Package size={48} />
-                      <p className="font-bold">
-                        No products found matching your search
-                      </p>
-                    </div>
-                  </td>
-                </tr>
               )}
             </tbody>
           </table>
         </div>
       </div>
 
-      {/* Add Product Modal */}
+      {/* Modals */}
       {isModalOpen && (
         <AddProductModal
           isOpen={isModalOpen}
           onClose={() => setIsModalOpen(false)}
-          onSuccess={() => {
-            loadProducts();
-            toast.success("New product added to inventory");
-          }}
+          onSuccess={loadProducts}
         />
       )}
-
-      {/* Edit Product Modal */}
       {isEditModalOpen && (
         <EditProductModal
           isOpen={isEditModalOpen}
@@ -235,10 +235,7 @@ export default function ManageProducts() {
             setIsEditModalOpen(false);
             setSelectedProduct(null);
           }}
-          onSuccess={() => {
-            loadProducts();
-            toast.success("Product updated successfully");
-          }}
+          onSuccess={loadProducts}
           product={selectedProduct}
         />
       )}

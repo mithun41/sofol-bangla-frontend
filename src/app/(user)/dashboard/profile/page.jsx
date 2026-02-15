@@ -314,11 +314,27 @@ export default function ProfilePage() {
                 </p>
                 <p className="text-slate-900 font-semibold">{user.username}</p>
               </div>
+              {/* Account Status Section */}
               <div className="p-4 bg-slate-50 rounded-xl">
                 <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
                   Account Status
                 </p>
-                <p className="text-emerald-600 font-semibold">● Active</p>
+                <p
+                  className={`font-semibold capitalize flex items-center gap-1.5 ${
+                    user.status === "active"
+                      ? "text-emerald-600"
+                      : "text-amber-600"
+                  }`}
+                >
+                  <span
+                    className={`w-2 h-2 rounded-full ${
+                      user.status === "active"
+                        ? "bg-emerald-600"
+                        : "bg-amber-600 animate-pulse"
+                    }`}
+                  ></span>
+                  {user.status || "Pending"}
+                </p>
               </div>
             </div>
           </div>

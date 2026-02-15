@@ -2,19 +2,18 @@
 import { useState, useEffect } from "react";
 import api from "@/services/api";
 import Link from "next/link";
-import reportService from "@/services/reportService"; // নতুন সার্ভিস
+import reportService from "@/services/reportService";
 import { Loader2 } from "lucide-react";
 import UserMonthlyReport from "@/components/UserMonthlyReport";
 
 export default function DashboardHome() {
   const [user, setUser] = useState(null);
-  const [stats, setStats] = useState(null); // গ্রাফের ডাটার জন্য
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
       try {
-        // ১. প্রোফাইল ডাটা এবং ২. রিপোর্ট ডাটা একসাথে ফেচ করা
         const [profileRes, reportData] = await Promise.all([
           api.get("accounts/profile/"),
           reportService.getUserMonthlyReport(),
@@ -38,6 +37,33 @@ export default function DashboardHome() {
         <p className="font-bold text-slate-600">Loading Dashboard...</p>
       </div>
     );
+
+  // --- ডায়নামিক র‍্যাঙ্ক ক্যালকুলেশন লজিক ---
+  const currentMatching = user
+    ? Math.min(user.total_left, user.total_right)
+    : 0;
+
+  const getNextRankInfo = () => {
+    const ranks = [
+      { level: 4, target: 15 },
+      { level: 5, target: 50 },
+      { level: 6, target: 200 },
+      { level: 7, target: 500 },
+      { level: 8, target: 1200 },
+    ];
+
+    // ইউজারের বর্তমান স্টারের চেয়ে বড় প্রথম টার্গেটটি খোঁজা
+    const next = ranks.find((r) => r.level > user.star_level);
+    if (!next) return null;
+
+    return {
+      star: next.level,
+      needed:
+        next.target - currentMatching > 0 ? next.target - currentMatching : 0,
+    };
+  };
+
+  const nextRank = getNextRankInfo();
 
   const cardStats = [
     {
@@ -86,23 +112,19 @@ export default function DashboardHome() {
             </span>
           </div>
         </div>
-        {/* Progress Info */}
+
+        {/* Dynamic Progress Info */}
         <div className="flex items-center gap-2 text-[11px] font-bold text-slate-500 uppercase tracking-wide mt-2">
           <span>
-            Matching:{" "}
-            <span className="text-indigo-600">
-              {Math.min(user.left_count, user.right_count)}
-            </span>
+            Matching: <span className="text-indigo-600">{currentMatching}</span>
           </span>
-          {user.star_level < 4 && (
+          {nextRank && (
             <>
               <span className="text-slate-300">|</span>
               <span>
-                Need{" "}
-                <span className="text-rose-500">
-                  {15 - Math.min(user.left_count, user.right_count)}
-                </span>{" "}
-                more for <span className="text-amber-500">4 Star</span>
+                Need <span className="text-rose-500">{nextRank.needed}</span>{" "}
+                more for{" "}
+                <span className="text-amber-500">{nextRank.star} Star</span>
               </span>
             </>
           )}
@@ -114,7 +136,7 @@ export default function DashboardHome() {
         {cardStats.map((item, index) => (
           <div
             key={index}
-            className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100"
+            className="bg-white p-6 rounded-3xl shadow-sm border border-slate-100 transition-transform hover:scale-[1.02]"
           >
             <div
               className={`w-10 h-10 ${item.color} rounded-xl flex items-center justify-center text-white mb-4 shadow-lg text-lg`}
@@ -177,7 +199,7 @@ export default function DashboardHome() {
           <button
             onClick={() => {
               navigator.clipboard.writeText(user.reff_id);
-              alert("Copied!");
+              alert("Referral ID Copied!");
             }}
             className="mt-8 w-full bg-indigo-600 py-3 rounded-xl font-bold hover:bg-indigo-500 transition-all shadow-lg shadow-indigo-500/20"
           >
@@ -185,13 +207,17 @@ export default function DashboardHome() {
           </button>
         </div>
       </div>
-      {/* গ্রাফ রিপোর্ট সেকশন - এখানে গ্রাফটা বসালাম */}
-      {/* <div className="mb-8">{stats && <UserMonthlyReport stats={stats} />}</div> */}
+
+      {/* Monthly Report Chart */}
+      {stats && (
+        <div className="mt-8">
+          <UserMonthlyReport stats={stats} />
+        </div>
+      )}
     </div>
   );
 }
 
-// ছোট হেল্পার কম্পোনেন্ট যাতে কোড ক্লিন থাকে
 function QuickLink({ href, emoji, label, color }) {
   return (
     <Link

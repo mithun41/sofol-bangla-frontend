@@ -2,6 +2,7 @@ import Navbar from "@/components/Navbar";
 import { AuthProvider } from "@/context/AuthContext";
 import "../../app/globals.css";
 import { CartProvider } from "@/context/CartContext";
+import Footer from "@/components/Footer";
 
 export default function RootLayout({ children }) {
   return (
@@ -9,6 +10,7 @@ export default function RootLayout({ children }) {
       <AuthProvider>
         <Navbar />
         {children}
+        <Footer />
       </AuthProvider>
     </CartProvider>
   );

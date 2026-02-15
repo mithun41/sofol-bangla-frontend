@@ -10,6 +10,7 @@ import {
   ChevronLeft,
   ChevronRight,
   Loader2,
+  ChevronDown,
 } from "lucide-react";
 import { getAllProducts, getAllCategories } from "@/services/productService";
 import { useCart } from "@/context/CartContext";
@@ -19,10 +20,10 @@ import toast, { Toaster } from "react-hot-toast";
 function ShopContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
-  const catQuery = searchParams.get("category"); // স্লাইডার থেকে আসা ক্যাটাগরি আইডি
+  const catQuery = searchParams.get("category");
 
   const { user } = useAuth();
-  const { addToCart, cart } = useCart();
+  const { addToCart } = useCart();
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -33,6 +34,7 @@ function ShopContent() {
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [minPrice, setMinPrice] = useState(0);
   const [maxPrice, setMaxPrice] = useState(50000);
+  const [expandedCats, setExpandedCats] = useState({});
 
   // Pagination States
   const [currentPage, setCurrentPage] = useState(1);
@@ -40,7 +42,6 @@ function ShopContent() {
 
   const isActiveMember = user?.status === "active";
 
-  // ১. স্লাইডার থেকে আইডি আসলে সেটা অটো সিলেক্ট করা
   useEffect(() => {
     if (catQuery) {
       setSelectedCategory(Number(catQuery));
@@ -49,7 +50,6 @@ function ShopContent() {
     }
   }, [catQuery]);
 
-  // ২. এপিআই থেকে ডেটা লোড করা
   useEffect(() => {
     const loadData = async () => {
       try {
@@ -66,7 +66,6 @@ function ShopContent() {
         setProducts(allProducts || []);
         setCategories(catRes.data || []);
       } catch (err) {
-        console.error("Data loading failed", err);
         toast.error("Failed to load data");
       } finally {
         setLoading(false);
@@ -75,10 +74,14 @@ function ShopContent() {
     loadData();
   }, []);
 
-  // ফিল্টার চেঞ্জ হলে পেজ ১-এ নিয়ে আসা
   useEffect(() => {
     setCurrentPage(1);
   }, [searchTerm, selectedCategory, minPrice, maxPrice]);
+
+  const toggleExpand = (e, id) => {
+    e.stopPropagation();
+    setExpandedCats((prev) => ({ ...prev, [id]: !prev[id] }));
+  };
 
   const handleAddToCartWithToast = (p) => {
     const originalPrice = Number(p.price || 0);
@@ -93,42 +96,22 @@ function ShopContent() {
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
-
     addToCart(cartItem);
-    toast.success(
-      <div className="flex flex-col text-xs font-bold">
-        <span>{p.name} added!</span>
-        <span>Price: ৳{finalPrice}</span>
-      </div>,
-      {
-        position: "top-center",
-        style: { borderRadius: "10px", background: "#10b981", color: "#fff" },
-      },
-    );
+    toast.success(`${p.name} added!`, { position: "top-center" });
   };
 
-  const handleOrderNow = (p) => {
-    handleAddToCartWithToast(p);
-    router.push("/cart");
-  };
-
-  // --- Filter Logic ---
   const filteredProducts = products.filter((p) => {
     const productPrice = Number(p.price || 0);
     const matchesSearch = p.name
       .toLowerCase()
       .includes(searchTerm.toLowerCase());
-
-    // ক্যাটাগরি ফিল্টার: String/Number দুইটাই হ্যান্ডেল করা হয়েছে
     const matchesCategory =
       selectedCategory === "All" ||
       Number(p.category) === Number(selectedCategory);
-
     const matchesPrice = productPrice >= minPrice && productPrice <= maxPrice;
     return matchesSearch && matchesCategory && matchesPrice;
   });
 
-  // --- Pagination Logic ---
   const indexOfLastItem = currentPage * itemsPerPage;
   const indexOfFirstItem = indexOfLastItem - itemsPerPage;
   const currentItems = filteredProducts.slice(
@@ -161,50 +144,89 @@ function ShopContent() {
             )}
           </div>
 
+          {/* Categories with Sub-category Support */}
           <div className="mb-8">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">
               Categories
             </label>
-            <div className="space-y-1.5">
+            <div className="space-y-1">
               <button
                 onClick={() => {
                   setSelectedCategory("All");
                   router.push("/shop");
                 }}
-                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${selectedCategory === "All" ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-slate-50 dark:bg-slate-800 hover:bg-slate-100"}`}
+                className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${selectedCategory === "All" ? "bg-emerald-500 text-white shadow-lg" : "bg-slate-50 dark:bg-slate-800 hover:bg-slate-100"}`}
               >
                 All Products
               </button>
-              {categories.map((cat) => (
-                <button
-                  key={cat.id}
-                  onClick={() => {
-                    setSelectedCategory(cat.id);
-                    router.push(`/shop?category=${cat.id}`);
-                  }}
-                  className={`w-full text-left px-4 py-2.5 rounded-xl text-xs font-bold transition-all ${Number(selectedCategory) === cat.id ? "bg-emerald-500 text-white shadow-lg shadow-emerald-100" : "bg-slate-50 dark:bg-slate-800 hover:bg-slate-100"}`}
-                >
-                  {cat.name}
-                </button>
-              ))}
+
+              {categories
+                .filter((c) => !c.parent)
+                .map((cat) => (
+                  <div key={cat.id} className="space-y-1">
+                    <div
+                      onClick={() => {
+                        setSelectedCategory(cat.id);
+                        router.push(`/shop?category=${cat.id}`);
+                      }}
+                      className={`group flex items-center justify-between px-4 py-2.5 rounded-xl text-xs font-bold cursor-pointer transition-all ${Number(selectedCategory) === cat.id ? "bg-emerald-500 text-white" : "bg-slate-50 dark:bg-slate-800 hover:bg-slate-100"}`}
+                    >
+                      <span>{cat.name}</span>
+                      {cat.subcategories?.length > 0 && (
+                        <button
+                          onClick={(e) => toggleExpand(e, cat.id)}
+                          className="p-1 hover:bg-white/20 rounded"
+                        >
+                          <ChevronDown
+                            size={14}
+                            className={`transition-transform ${expandedCats[cat.id] ? "rotate-180" : ""}`}
+                          />
+                        </button>
+                      )}
+                    </div>
+
+                    {expandedCats[cat.id] &&
+                      cat.subcategories?.map((sub) => (
+                        <button
+                          key={sub.id}
+                          onClick={() => {
+                            setSelectedCategory(sub.id);
+                            router.push(`/shop?category=${sub.id}`);
+                          }}
+                          className={`w-full text-left pl-8 pr-4 py-2 rounded-xl text-[11px] font-bold transition-all ${Number(selectedCategory) === sub.id ? "text-emerald-500 bg-emerald-50 dark:bg-emerald-500/10" : "text-slate-500 hover:bg-slate-50 dark:hover:bg-slate-800"}`}
+                        >
+                          • {sub.name}
+                        </button>
+                      ))}
+                  </div>
+                ))}
             </div>
           </div>
 
+          {/* Dual Range Price Slider */}
           <div className="mb-6">
-            <label className="text-xs font-black text-slate-400 uppercase tracking-widest mb-4 block">
-              Price Range: ৳{minPrice} - ৳{maxPrice}
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-4 block">
+              Price: ৳{minPrice} - ৳{maxPrice}
             </label>
-            <div className="space-y-4 px-1">
+            <div className="relative h-10 flex items-center">
+              <div className="absolute w-full h-1.5 bg-slate-100 dark:bg-slate-800 rounded-full" />
+              <div
+                className="absolute h-1.5 bg-emerald-500 rounded-full"
+                style={{
+                  left: `${(minPrice / 50000) * 100}%`,
+                  right: `${100 - (maxPrice / 50000) * 100}%`,
+                }}
+              />
               <input
                 type="range"
                 min="0"
-                max="10000"
-                step="100"
+                max="50000"
+                step="500"
                 value={minPrice}
                 onChange={(e) =>
-                  setMinPrice(Math.min(Number(e.target.value), maxPrice - 100))
+                  setMinPrice(Math.min(Number(e.target.value), maxPrice - 1000))
                 }
-                className="w-full accent-emerald-500 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                className="absolute w-full appearance-none bg-transparent pointer-events-none z-30 accent-emerald-600"
               />
               <input
                 type="range"
@@ -213,9 +235,9 @@ function ShopContent() {
                 step="500"
                 value={maxPrice}
                 onChange={(e) =>
-                  setMaxPrice(Math.max(Number(e.target.value), minPrice + 100))
+                  setMaxPrice(Math.max(Number(e.target.value), minPrice + 1000))
                 }
-                className="w-full accent-emerald-500 h-1.5 bg-slate-100 rounded-lg appearance-none cursor-pointer"
+                className="absolute w-full appearance-none bg-transparent pointer-events-none z-30 accent-emerald-600"
               />
             </div>
           </div>
@@ -228,7 +250,7 @@ function ShopContent() {
               setMaxPrice(50000);
               router.push("/shop");
             }}
-            className="w-full mt-4 px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-slate-800 transition-all active:scale-95"
+            className="w-full mt-4 px-4 py-3 bg-slate-900 text-white rounded-xl font-bold text-[10px] uppercase tracking-widest hover:bg-emerald-600 transition-all"
           >
             Reset Filters
           </button>
@@ -241,7 +263,7 @@ function ShopContent() {
     <div className="min-h-screen bg-[#f8fafc] dark:bg-slate-950 py-8 px-4 sm:px-6 lg:px-8 relative">
       <Toaster />
       <div className="max-w-7xl mx-auto">
-        <div className="mb-8 flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div className="mb-8 flex flex-col md:flex-row justify-between gap-4">
           <div className="relative w-full max-w-md">
             <Search
               className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
@@ -249,15 +271,15 @@ function ShopContent() {
             />
             <input
               type="text"
-              placeholder="Search premium products..."
+              placeholder="Search products..."
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 outline-none text-sm font-medium shadow-sm focus:ring-2 focus:ring-emerald-500/20 transition-all"
+              className="w-full pl-11 pr-4 py-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 outline-none text-sm font-medium"
             />
           </div>
           <button
             onClick={() => setMobileFilterOpen(true)}
-            className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 text-sm font-black shadow-sm uppercase tracking-tighter"
+            className="lg:hidden flex items-center justify-center gap-2 px-6 py-3.5 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 text-sm font-black uppercase tracking-tighter"
           >
             <SlidersHorizontal size={18} /> Filters
           </button>
@@ -275,24 +297,23 @@ function ShopContent() {
               <div className="flex flex-col items-center justify-center py-24 gap-4">
                 <Loader2 className="animate-spin text-emerald-500" size={40} />
                 <p className="text-slate-400 font-bold uppercase tracking-widest text-[10px]">
-                  Loading Products...
+                  Loading...
                 </p>
               </div>
             ) : currentItems.length > 0 ? (
               <>
                 <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-4 gap-4 md:gap-6">
                   {currentItems.map((p) => {
-                    const discountAmount = Number(p.point_value || 0);
+                    const discount = Number(p.point_value || 0);
                     const finalPrice = isActiveMember
-                      ? Number(p.price) - discountAmount
+                      ? Number(p.price) - discount
                       : Number(p.price);
-
                     return (
                       <div
                         key={p.id}
-                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden group hover:shadow-xl hover:-translate-y-1 transition-all duration-300 flex flex-col"
+                        className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-100 dark:border-slate-800 overflow-hidden group hover:shadow-xl transition-all flex flex-col"
                       >
-                        <div className="relative aspect-[4/5] overflow-hidden bg-slate-50">
+                        <div className="relative aspect-[4/5] bg-slate-50 overflow-hidden">
                           <Link
                             href={`/shop/${p.id}`}
                             className="block w-full h-full"
@@ -300,48 +321,44 @@ function ShopContent() {
                             <img
                               src={p.image}
                               alt={p.name}
-                              className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-110"
+                              className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-110"
                             />
                           </Link>
-                          <div className="absolute top-3 left-3 flex flex-col gap-1">
-                            {isActiveMember
-                              ? discountAmount > 0 && (
-                                  <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg shadow-orange-200/50 italic">
-                                    ৳{discountAmount} OFF
-                                  </span>
-                                )
-                              : p.point_value > 0 && (
-                                  <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase shadow-lg shadow-emerald-200/50">
-                                    +{p.point_value} PV
-                                  </span>
-                                )}
+                          <div className="absolute top-3 left-3">
+                            {isActiveMember && discount > 0 ? (
+                              <span className="bg-orange-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase italic">
+                                ৳{discount} OFF
+                              </span>
+                            ) : (
+                              p.point_value > 0 && (
+                                <span className="bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-lg uppercase">
+                                  +{p.point_value} PV
+                                </span>
+                              )
+                            )}
                           </div>
-                          <button
-                            onClick={() => handleAddToCartWithToast(p)}
-                            className="absolute bottom-3 right-3 w-10 h-10 bg-white/90 backdrop-blur-md dark:bg-slate-800 rounded-xl flex items-center justify-center text-emerald-600 shadow-xl opacity-0 group-hover:opacity-100 translate-y-4 group-hover:translate-y-0 transition-all duration-300 z-10 hover:bg-emerald-600 hover:text-white"
-                          >
-                            <ShoppingCart size={18} />
-                          </button>
                         </div>
                         <div className="p-4 flex-1 flex flex-col">
                           <Link href={`/shop/${p.id}`}>
-                            <h3 className="text-xs md:text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2 leading-relaxed group-hover:text-emerald-600 transition-colors tracking-tight">
+                            <h3 className="text-xs md:text-sm font-bold text-slate-800 dark:text-slate-200 mb-2 line-clamp-2">
                               {p.name}
                             </h3>
                           </Link>
                           <div className="flex items-center gap-2 mb-4">
-                            <span className="text-sm md:text-lg font-black text-emerald-600 tracking-tight">
+                            <span className="text-sm md:text-lg font-black text-emerald-600">
                               ৳{Math.floor(finalPrice)}
                             </span>
-                            {isActiveMember && discountAmount > 0 && (
-                              <span className="text-[10px] text-slate-400 line-through font-bold">
+                            {isActiveMember && discount > 0 && (
+                              <span className="text-[10px] text-slate-400 line-through">
                                 ৳{Math.floor(p.price)}
                               </span>
                             )}
                           </div>
                           <button
-                            onClick={() => p.stock > 0 && handleOrderNow(p)}
-                            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mt-auto ${p.stock > 0 ? "bg-emerald-600 text-white hover:bg-emerald-700 shadow-lg shadow-emerald-100 active:scale-95" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
+                            onClick={() =>
+                              p.stock > 0 && handleAddToCartWithToast(p)
+                            }
+                            className={`w-full py-3 rounded-xl text-[10px] font-black uppercase tracking-widest transition-all mt-auto ${p.stock > 0 ? "bg-emerald-600 text-white hover:bg-emerald-700" : "bg-slate-100 text-slate-400 cursor-not-allowed"}`}
                           >
                             {p.stock > 0 ? "Buy Now" : "Sold Out"}
                           </button>
@@ -352,54 +369,48 @@ function ShopContent() {
                 </div>
                 {/* Pagination */}
                 {totalPages > 1 && (
-                  <div className="mt-16 mb-10 flex justify-center items-center gap-2">
+                  <div className="mt-16 flex justify-center items-center gap-2">
                     <button
                       onClick={() => paginate(currentPage - 1)}
                       disabled={currentPage === 1}
-                      className="w-11 h-11 flex items-center justify-center rounded-xl border border-slate-200 bg-white disabled:opacity-30 hover:bg-emerald-50 transition-all"
+                      className="w-10 h-10 flex items-center justify-center rounded-xl border bg-white disabled:opacity-20"
                     >
-                      <ChevronLeft size={20} />
+                      <ChevronLeft size={18} />
                     </button>
-                    {[...Array(totalPages)].map((_, idx) => (
+                    {[...Array(totalPages)].map((_, i) => (
                       <button
-                        key={idx + 1}
-                        onClick={() => paginate(idx + 1)}
-                        className={`w-11 h-11 rounded-xl border font-black text-xs transition-all ${currentPage === idx + 1 ? "bg-emerald-600 text-white border-emerald-600 shadow-xl shadow-emerald-100" : "bg-white border-slate-200 text-slate-600 hover:border-emerald-500"}`}
+                        key={i}
+                        onClick={() => paginate(i + 1)}
+                        className={`w-10 h-10 rounded-xl border text-xs font-bold ${currentPage === i + 1 ? "bg-emerald-600 text-white" : "bg-white"}`}
                       >
-                        {idx + 1}
+                        {i + 1}
                       </button>
                     ))}
                     <button
                       onClick={() => paginate(currentPage + 1)}
                       disabled={currentPage === totalPages}
-                      className="w-11 h-11 flex items-center justify-center rounded-xl border border-slate-200 bg-white disabled:opacity-30 hover:bg-emerald-50 transition-all"
+                      className="w-10 h-10 flex items-center justify-center rounded-xl border bg-white disabled:opacity-20"
                     >
-                      <ChevronRight size={20} />
+                      <ChevronRight size={18} />
                     </button>
                   </div>
                 )}
               </>
             ) : (
-              <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-900 rounded-3xl border border-dashed border-slate-200">
-                <div className="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mb-4">
-                  <Search className="text-slate-300" size={32} />
-                </div>
-                <p className="text-slate-500 font-bold uppercase tracking-widest text-[10px]">
-                  No products found in this criteria.
-                </p>
+              <div className="py-20 text-center bg-white rounded-3xl border border-dashed text-slate-400 font-bold uppercase text-[10px]">
+                No products found.
               </div>
             )}
           </main>
         </div>
       </div>
-      {/* Floating Cart & Mobile Filter Wrapper */}
       {mobileFilterOpen && (
-        <div className="fixed inset-0 z-[100] lg:hidden animate-in fade-in duration-300">
+        <div className="fixed inset-0 z-[100] lg:hidden animate-in fade-in">
           <div
             className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
             onClick={() => setMobileFilterOpen(false)}
           />
-          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 shadow-2xl animate-in slide-in-from-right duration-500">
+          <div className="absolute right-0 top-0 bottom-0 w-80 bg-white dark:bg-slate-900 shadow-2xl animate-in slide-in-from-right">
             <FilterPanel isMobile />
           </div>
         </div>
@@ -408,7 +419,6 @@ function ShopContent() {
   );
 }
 
-// Main Export with Suspense
 export default function ShopPage() {
   return (
     <Suspense

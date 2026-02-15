@@ -122,9 +122,15 @@ export default function ManageCategories() {
                 <h3 className="font-bold text-base text-slate-800 dark:text-slate-200 truncate">
                   {cat.name}
                 </h3>
-                <p className="text-[10px] text-slate-400 uppercase font-black italic tracking-widest">
-                  Slug: {cat.slug}
-                </p>
+                {cat.parent_name ? (
+                  <p className="text-[10px] text-blue-500 font-bold uppercase tracking-wider">
+                    Sub-category of: {cat.parent_name}
+                  </p>
+                ) : (
+                  <p className="text-[10px] text-slate-400 uppercase font-black italic tracking-widest">
+                    Main Category
+                  </p>
+                )}
               </div>
 
               <div className="flex flex-col gap-1">

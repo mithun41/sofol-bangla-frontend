@@ -2,7 +2,7 @@
 import { useState, useEffect } from "react";
 import api from "@/services/api";
 import { authService } from "@/services/authService";
-import Swal from "sweetalert2"; // SweetAlert ইমপোর্ট করুন
+import Swal from "sweetalert2";
 
 export default function AdminDashboard() {
   const [users, setUsers] = useState([]);

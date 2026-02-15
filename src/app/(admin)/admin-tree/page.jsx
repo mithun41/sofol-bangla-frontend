@@ -17,33 +17,57 @@ const TreeNode = ({ node, onNodeClick }) => {
 
   return (
     <div className="flex flex-col items-center">
-      {/* Compact User Node with Individual Hover Tooltip */}
+      {/* User Node */}
       <div className="relative">
         <div
           onClick={() => onNodeClick(node.username)}
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
-          className={`w-9 h-9 rounded-full flex flex-col items-center justify-center text-white shadow-md cursor-pointer transform hover:scale-125 transition-transform duration-150 border-2 relative ${
+          className={`w-10 h-10 rounded-full flex flex-col items-center justify-center text-white shadow-md cursor-pointer transform hover:scale-110 transition-all duration-150 border-2 relative ${
             node.status === "active"
               ? "bg-emerald-500 border-emerald-200"
               : "bg-rose-400 border-rose-200"
           }`}
         >
-          <span className="text-[7px] font-bold leading-none">
-            {node.username.slice(0, 4)}
+          {/* Username (First 4 chars) */}
+          <span className="text-[8px] font-black leading-none uppercase">
+            {node.username.slice(0, 6)}
           </span>
-          <span className="text-[5px] opacity-70 leading-none mt-0.5">
-            {node.placement_id}
+
+          {/* Division (Replacing ID) */}
+          <span className="text-[6px] opacity-90 leading-none mt-1 font-bold">
+            {node.division ? node.division.slice(0, 5) : "N/A"}
           </span>
         </div>
 
-        {/* Hover Tooltip - শুধুমাত্র এই node এ hover করলে দেখাবে */}
+        {/* Enhanced Hover Tooltip */}
         {isHovered && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-2 py-1 bg-slate-900 text-white text-[10px] rounded whitespace-nowrap z-50 shadow-lg animate-fadeIn">
-            <div className="font-bold">{node.username}</div>
-            <div className="text-[8px] opacity-80">ID: {node.placement_id}</div>
-            <div className="text-[8px] opacity-80">
-              Status: {node.status === "active" ? "✓ Active" : "✗ Inactive"}
+          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg whitespace-nowrap z-50 shadow-2xl animate-fadeIn border border-slate-700">
+            <div className="font-bold text-indigo-300 border-b border-slate-700 pb-1 mb-1">
+              {node.username}
+            </div>
+            <div className="flex flex-col gap-0.5">
+              <div className="text-[9px]">
+                <span className="text-slate-400">Division:</span>{" "}
+                <span className="text-emerald-400 font-bold">
+                  {node.division || "Not Set"}
+                </span>
+              </div>
+              <div className="text-[9px]">
+                <span className="text-slate-400">Status:</span>{" "}
+                <span
+                  className={
+                    node.status === "active"
+                      ? "text-emerald-400"
+                      : "text-rose-400"
+                  }
+                >
+                  {node.status === "active" ? "✓ Active" : "✗ Inactive"}
+                </span>
+              </div>
+              <div className="text-[8px] text-slate-500 italic mt-1">
+                Click to explore this branch
+              </div>
             </div>
             {/* Tooltip Arrow */}
             <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
@@ -51,11 +75,11 @@ const TreeNode = ({ node, onNodeClick }) => {
         )}
       </div>
 
-      {/* Children Container - Very Compact */}
+      {/* Children Branches */}
       {(node.left || node.right) && (
-        <div className="flex gap-2 md:gap-4 mt-4 relative">
-          {/* Connecting Line - Thinner */}
-          <div className="absolute top-[-8px] left-1/2 w-[50%] h-[1px] bg-gray-300 -translate-x-1/2"></div>
+        <div className="flex gap-4 md:gap-8 mt-4 relative">
+          {/* Horizontal connecting line */}
+          <div className="absolute top-[-8px] left-1/2 w-[60%] h-[1px] bg-gray-300 -translate-x-1/2"></div>
 
           {/* Left Branch */}
           <div className="relative">
@@ -77,7 +101,6 @@ const TreeNode = ({ node, onNodeClick }) => {
 // Recursive function to fetch complete tree
 const fetchCompleteTree = async (username) => {
   if (!username) return null;
-
   try {
     const res = await api.get(`accounts/tree/${username}/`);
     const node = res.data;
@@ -92,16 +115,11 @@ const fetchCompleteTree = async (username) => {
           : Promise.resolve(null),
       ]);
 
-      return {
-        ...node,
-        left: leftTree,
-        right: rightTree,
-      };
+      return { ...node, left: leftTree, right: rightTree };
     }
-
     return node;
   } catch (err) {
-    console.error(`Error fetching tree for ${username}:`, err);
+    console.error(`Error fetching tree:`, err);
     return null;
   }
 };
@@ -128,8 +146,6 @@ export default function CompactFullTreeView() {
 
     setLoading(true);
     setErrorMessage("");
-    setTreeData(null);
-
     try {
       const completeTree = await fetchCompleteTree(targetUser);
       setTreeData(completeTree);
@@ -137,18 +153,14 @@ export default function CompactFullTreeView() {
       setSearch(targetUser);
     } catch (err) {
       setTreeData(null);
-      setErrorMessage(
-        err.response?.status === 404
-          ? "User not found!"
-          : "Something went wrong.",
-      );
+      setErrorMessage("User not found or API error.");
     } finally {
       setLoading(false);
     }
   };
 
   return (
-    <div className="p-2 md:p-4 bg-slate-50 min-h-screen overflow-auto">
+    <div className="p-4 bg-slate-50 min-h-screen">
       <style jsx>{`
         @keyframes fadeIn {
           from {
@@ -161,44 +173,47 @@ export default function CompactFullTreeView() {
           }
         }
         .animate-fadeIn {
-          animation: fadeIn 0.15s ease-out;
+          animation: fadeIn 0.2s ease-out;
         }
       `}</style>
 
-      <div className="max-w-full mx-auto flex flex-col items-center">
-        {/* Compact Search Header */}
-        <div className="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 flex flex-wrap gap-2 mb-4">
-          <input
-            type="text"
-            placeholder="Username..."
-            className="border border-slate-200 p-2 rounded-lg text-black text-sm outline-none focus:border-indigo-500 w-36 md:w-48"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            onKeyDown={(e) => e.key === "Enter" && fetchTree()}
-          />
+      <div className="max-w-6xl mx-auto flex flex-col items-center">
+        {/* Search Bar & Controls */}
+        <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 flex flex-wrap items-center justify-center gap-4 mb-6 w-full max-w-2xl">
+          <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-1 border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
+            <span className="text-slate-400 text-sm font-bold">@</span>
+            <input
+              type="text"
+              placeholder="Username"
+              className="bg-transparent p-2 text-slate-800 text-sm outline-none w-32 md:w-48 font-semibold"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              onKeyDown={(e) => e.key === "Enter" && fetchTree()}
+            />
+          </div>
+
           <button
             onClick={() => fetchTree()}
             disabled={loading}
-            className="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-semibold hover:bg-indigo-700 disabled:bg-slate-300 transition-all"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 active:scale-95 disabled:bg-slate-300 transition-all"
           >
-            {loading ? "Loading..." : "Load Tree"}
+            {loading ? "Searching..." : "View Tree"}
           </button>
 
-          {/* Zoom Controls */}
           {treeData && (
-            <div className="flex items-center gap-2 border-l pl-2 ml-2">
+            <div className="flex items-center gap-3 border-l pl-4">
               <button
-                onClick={() => setZoom(Math.max(50, zoom - 10))}
-                className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+                onClick={() => setZoom(Math.max(40, zoom - 10))}
+                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold"
               >
                 -
               </button>
-              <span className="text-xs text-slate-600 w-10 text-center">
+              <span className="text-[11px] font-black text-slate-500 min-w-[35px] text-center">
                 {zoom}%
               </span>
               <button
                 onClick={() => setZoom(Math.min(150, zoom + 10))}
-                className="w-7 h-7 bg-slate-100 hover:bg-slate-200 rounded text-slate-700 font-bold text-xs"
+                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold"
               >
                 +
               </button>
@@ -206,52 +221,44 @@ export default function CompactFullTreeView() {
           )}
         </div>
 
-        {/* Compact Loading */}
-        {loading && (
-          <div className="mb-3 bg-indigo-50 px-4 py-2 rounded-lg border border-indigo-200">
-            <p className="text-indigo-600 text-xs font-semibold animate-pulse">
-              🌳 Loading{" "}
-              {totalNodes > 0 ? `(${totalNodes} nodes so far)` : "tree"}...
-            </p>
-          </div>
-        )}
-
+        {/* Info & Errors */}
         {errorMessage && (
-          <p className="mb-3 text-rose-500 text-xs font-semibold bg-rose-50 px-3 py-2 rounded-lg border border-rose-100">
+          <div className="mb-4 text-rose-500 text-xs font-bold bg-rose-50 px-4 py-2 rounded-lg border border-rose-100">
             {errorMessage}
-          </p>
-        )}
-
-        {/* Compact Stats */}
-        {treeData && !loading && (
-          <div className="mb-3 bg-emerald-50 px-4 py-2 rounded-lg border border-emerald-200">
-            <p className="text-emerald-700 text-xs font-semibold">
-              ✅ Total:{" "}
-              <span className="text-emerald-900 font-black">{totalNodes}</span>{" "}
-              nodes
-              <span className="ml-3 text-slate-500">
-                💡 Hover on nodes to see full details
-              </span>
-            </p>
           </div>
         )}
 
-        {/* Compact Tree Canvas with Zoom */}
-        {treeData && (
-          <div className="w-full bg-white rounded-2xl shadow-xl border border-slate-100 p-4 overflow-auto">
+        {treeData && !loading && (
+          <div className="mb-6 flex gap-4">
+            <div className="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-[11px] font-bold text-slate-600">
+              🌳 Total Network:{" "}
+              <span className="text-indigo-600">{totalNodes}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Tree Visualizer */}
+        {treeData ? (
+          <div className="w-full bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 overflow-auto scrollbar-hide min-h-[600px] flex justify-center items-start">
             <div
-              className="inline-block min-w-full"
               style={{
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: "top center",
-                transition: "transform 0.2s",
+                transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
               }}
             >
-              <div className="flex justify-center py-4">
-                <TreeNode node={treeData} onNodeClick={fetchTree} />
-              </div>
+              <TreeNode node={treeData} onNodeClick={fetchTree} />
             </div>
           </div>
+        ) : (
+          !loading && (
+            <div className="mt-20 text-center opacity-20">
+              <div className="text-6xl mb-4">🌳</div>
+              <p className="text-xl font-bold italic text-slate-800 uppercase tracking-widest">
+                Search a username to load tree
+              </p>
+            </div>
+          )
         )}
       </div>
     </div>

@@ -19,7 +19,7 @@ export default function AdminWithdrawalManager() {
     try {
       await api.post(`accounts/admin/withdrawals/${id}/handle/`, { action });
       alert(`Request ${action}ed!`);
-      fetchRequests(); // লিস্ট রিফ্রেশ করা
+      fetchRequests();
     } catch (err) {
       alert("Error processing request");
     }
@@ -42,7 +42,7 @@ export default function AdminWithdrawalManager() {
           <tbody>
             {requests.map((req) => (
               <tr key={req.id} className="border-t">
-                <td className="p-4 font-medium">{req.user_username}</td>
+                <td className="p-4 font-medium">{req.username}</td>
                 <td className="p-4 text-indigo-600 font-bold">৳{req.amount}</td>
                 <td className="p-4">
                   {req.method} ({req.account_number})

@@ -1,101 +1,121 @@
 "use client";
 import React from "react";
 import {
-  BarChart,
-  Bar,
-  XAxis,
-  YAxis,
-  CartesianGrid,
-  Tooltip,
-  ResponsiveContainer,
-  Cell,
-} from "recharts";
-import { DollarSign, Gift, Package, TrendingUp } from "lucide-react";
+  Users,
+  Activity,
+  Clock,
+  TrendingUp,
+  Wallet,
+  PieChart,
+  Star,
+  Plane,
+  ShieldCheck,
+  Building2,
+} from "lucide-react";
 
 export default function AdminAnalytics({ reportData }) {
-  // ১. ভ্যালুগুলোকে Number এ কনভার্ট করে নেওয়া (যাতে undefined থাকলে ০ দেখায়)
-  const sales = Number(reportData?.monthly_sales || 0);
-  const bonus = Number(reportData?.monthly_bonus || 0);
-  const pending = reportData?.pending_orders || 0;
-  const month = reportData?.month_name || "Current Month";
+  // ১. ব্যাকএন্ডের নতুন API স্ট্রাকচার অনুযায়ী ডাটা ধরা
+  const summary = reportData?.summary || {};
+  const funds = reportData?.funds || {};
 
-  const chartData = [
-    { name: "Revenue", value: sales, color: "#10b981" },
-    { name: "Bonus", value: bonus, color: "#3b82f6" },
+  // ২. ফান্ড কার্ডের জন্য ম্যাপিং (তোর Python API এর কীগুলোর সাথে মিল রেখে)
+  const fundList = [
+    {
+      label: "Referral Fund",
+      value: funds.referral,
+      icon: <Users size={18} />,
+      color: "bg-blue-500",
+    },
+    {
+      label: "Matching Fund",
+      value: funds.matching,
+      icon: <PieChart size={18} />,
+      color: "bg-purple-500",
+    },
+    {
+      label: "Rank Reward",
+      value: funds.rank_reward,
+      icon: <Star size={18} />,
+      color: "bg-orange-500",
+    },
+    {
+      label: "Tour Fund",
+      value: funds.tour,
+      icon: <Plane size={18} />,
+      color: "bg-emerald-500",
+    },
+    {
+      label: "Leadership Fund",
+      value: funds.leadership,
+      icon: <ShieldCheck size={18} />,
+      color: "bg-indigo-500",
+    },
+    {
+      label: "Company Fund",
+      value: funds.company,
+      icon: <Building2 size={18} />,
+      color: "bg-slate-800",
+    },
   ];
 
   return (
-    <div className="space-y-8 p-6 bg-slate-50 rounded-[3rem]">
+    <div className="space-y-8 animate-in fade-in duration-500">
       {/* Top Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatCard
-          title="Monthly Revenue"
-          value={`৳${sales.toLocaleString()}`} // কমা সহ ফরম্যাট (যেমন: ৫,০০০)
-          icon={<DollarSign />}
-          trend="+12.5%"
-          color="bg-emerald-500"
-        />
-        <StatCard
-          title="Points Distributed"
-          value={`${bonus} PV`}
-          icon={<Gift />}
-          trend="Current Month"
+          title="Total Users"
+          value={summary.total_users || 0}
+          icon={<Users />}
+          trend="Total Community"
           color="bg-blue-600"
         />
         <StatCard
-          title="Pending Orders"
-          value={pending}
-          icon={<Package />}
-          trend="Needs Attention"
+          title="Active Members"
+          value={summary.active_users || 0}
+          icon={<Activity />}
+          trend="Paid Members"
+          color="bg-emerald-500"
+        />
+        <StatCard
+          title="Pending Payouts"
+          value={summary.pending_withdrawals || 0}
+          icon={<Clock />}
+          trend="Needs Approval"
           color="bg-orange-500"
+        />
+        <StatCard
+          title="Net Profit"
+          value={`৳${Number(summary.net_profit || 0).toLocaleString()}`}
+          icon={<TrendingUp />}
+          trend="Current Month"
+          color="bg-indigo-600"
         />
       </div>
 
-      {/* Sales vs Bonus Chart */}
-      <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
-        <div className="flex items-center justify-between mb-8">
-          <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2">
-            <TrendingUp className="text-emerald-500" /> Sales Overview ({month})
-          </h3>
-        </div>
-
-        <div className="h-[300px] w-full">
-          <ResponsiveContainer width="100%" height="100%">
-            <BarChart
-              data={chartData}
-              margin={{ top: 20, right: 30, left: 20, bottom: 5 }}
+      {/* Global Fund Balances Section */}
+      <div className="space-y-4">
+        <h3 className="text-xl font-bold text-slate-800 flex items-center gap-2 px-2">
+          <Wallet className="text-emerald-500" size={24} /> Global Fund Balances
+        </h3>
+        <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+          {fundList.map((fund, index) => (
+            <div
+              key={index}
+              className="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all text-center group"
             >
-              <CartesianGrid
-                strokeDasharray="3 3"
-                vertical={false}
-                stroke="#f1f5f9"
-              />
-              <XAxis
-                dataKey="name"
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
-              />
-              <YAxis
-                axisLine={false}
-                tickLine={false}
-                tick={{ fill: "#64748b", fontSize: 12 }}
-              />
-              <Tooltip
-                cursor={{ fill: "#f8fafc" }}
-                contentStyle={{
-                  borderRadius: "16px",
-                  border: "none",
-                  boxShadow: "0 10px 15px -3px rgba(0,0,0,0.1)",
-                }}
-              />
-              <Bar dataKey="value" radius={[10, 10, 0, 0]} barSize={60}>
-                {chartData.map((entry, index) => (
-                  <Cell key={`cell-${index}`} fill={entry.color} />
-                ))}
-              </Bar>
-            </BarChart>
-          </ResponsiveContainer>
+              <div
+                className={`${fund.color} w-10 h-10 rounded-xl flex items-center justify-center text-white mx-auto mb-3 shadow-sm group-hover:scale-110 transition-transform`}
+              >
+                {fund.icon}
+              </div>
+              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest leading-tight mb-1">
+                {fund.label}
+              </p>
+              <h3 className="text-lg font-black text-slate-800">
+                ৳{Number(fund.value || 0).toLocaleString()}
+              </h3>
+            </div>
+          ))}
         </div>
       </div>
     </div>
@@ -104,18 +124,18 @@ export default function AdminAnalytics({ reportData }) {
 
 function StatCard({ title, value, icon, trend, color }) {
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between group hover:shadow-lg transition-all">
-      <div className="flex items-center gap-4">
-        <div className={`${color} p-4 rounded-2xl text-white shadow-lg`}>
-          {icon}
-        </div>
-        <div>
-          <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-            {title}
-          </p>
-          <h3 className="text-2xl font-black text-slate-800">{value}</h3>
-          <p className="text-[10px] text-emerald-500 font-bold mt-1">{trend}</p>
-        </div>
+    <div className="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center gap-4 hover:shadow-lg transition-all">
+      <div className={`${color} p-4 rounded-2xl text-white shadow-lg`}>
+        {React.cloneElement(icon, { size: 28 })}
+      </div>
+      <div>
+        <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">
+          {title}
+        </p>
+        <h3 className="text-2xl font-black text-slate-800">{value}</h3>
+        <p className="text-[10px] text-emerald-500 font-bold mt-1 italic">
+          {trend}
+        </p>
       </div>
     </div>
   );

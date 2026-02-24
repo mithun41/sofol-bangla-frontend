@@ -1,40 +1,55 @@
 "use client";
-import React, { useState } from "react";
+import React from "react";
 import { useCart } from "@/context/CartContext";
-import { Minus, Plus, Trash2, Truck } from "lucide-react";
+import {
+  Minus,
+  Plus,
+  Trash2,
+  ShoppingBag,
+  Loader2,
+  ArrowRight,
+} from "lucide-react";
 import Link from "next/link";
 
 export default function CartPage() {
-  const { cart, updateQuantity, removeFromCart, clearCart, loading } =
-    useCart();
-  const [shippingMethod, setShippingMethod] = useState("inside");
+  const { cart, updateQuantity, removeFromCart, loading } = useCart();
 
-  // Calculations using backend-verified prices
+  // ১. শুধুমাত্র সাবটোটাল ক্যালকুলেশন
   const subtotal = cart.reduce(
     (acc, item) => acc + Number(item.price || 0) * item.quantity,
     0,
   );
-  const shippingCost = shippingMethod === "inside" ? 100 : 130;
-  const total = subtotal + shippingCost;
 
-  if (loading)
+  // ২. লোডিং স্টেট
+  if (loading && cart.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center font-bold">
-        Loading Cart Prices...
+      <div className="min-h-screen flex flex-col items-center justify-center bg-white">
+        <Loader2 className="animate-spin text-emerald-500 mb-4" size={48} />
+        <p className="text-slate-600 font-bold animate-pulse">
+          Syncing your cart...
+        </p>
       </div>
     );
+  }
 
+  // ৩. কার্ট খালি থাকলে ভিউ
   if (cart.length === 0) {
     return (
-      <div className="min-h-[60vh] flex flex-col items-center justify-center">
-        <h2 className="text-2xl font-bold text-slate-400">
+      <div className="min-h-[70vh] flex flex-col items-center justify-center p-4">
+        <div className="bg-slate-50 p-8 rounded-full mb-6">
+          <ShoppingBag size={80} className="text-slate-200" />
+        </div>
+        <h2 className="text-2xl font-bold text-slate-800">
           Your cart is empty!
         </h2>
+        <p className="text-slate-500 mt-2 text-center">
+          Looks like you haven't added anything yet.
+        </p>
         <Link
           href="/shop"
-          className="mt-4 text-emerald-500 font-semibold underline"
+          className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
         >
-          Go Shopping
+          Start Shopping
         </Link>
       </div>
     );
@@ -42,123 +57,130 @@ export default function CartPage() {
 
   return (
     <div className="min-h-screen bg-[#F8F9FA] py-10 px-4">
-      <div className="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-3 gap-8">
-        <div className="lg:col-span-2 space-y-6">
-          <div className="bg-white rounded-lg shadow-sm border border-slate-200">
-            {/* Table Header */}
-            <div className="p-6 border-b flex justify-between items-center bg-slate-50/50">
-              <h2 className="text-xl font-bold">My Cart ({cart.length})</h2>
-              <div className="hidden md:flex gap-16 text-xs font-bold text-slate-400 uppercase">
-                <span>Quantity</span>
-                <span>Price</span>
-                <span>Subtotal</span>
-              </div>
-            </div>
-
-            {/* Cart Items */}
-            <div className="divide-y divide-slate-100">
-              {cart.map((item) => (
-                <div
-                  key={item.id}
-                  className="p-6 flex flex-col md:flex-row items-center justify-between gap-4"
-                >
-                  <div className="flex items-center gap-4 w-full md:w-1/3">
-                    <img
-                      src={item.image}
-                      alt=""
-                      className="w-16 h-16 object-cover rounded-md border"
-                    />
-                    <h3 className="font-semibold text-slate-700">
-                      {item.name}
-                    </h3>
-                  </div>
-
-                  <div className="flex items-center justify-between w-full md:w-auto md:gap-10">
-                    <div className="flex items-center border border-slate-300 rounded-md">
-                      <button
-                        onClick={() => updateQuantity(item.id, -1)}
-                        className="p-2"
-                      >
-                        <Minus size={14} />
-                      </button>
-                      <span className="px-4 font-bold">{item.quantity}</span>
-                      <button
-                        onClick={() => updateQuantity(item.id, 1)}
-                        className="p-2"
-                      >
-                        <Plus size={14} />
-                      </button>
-                    </div>
-                    <div className="font-bold text-slate-700">
-                      ৳{item.price}
-                    </div>
-                    <div className="font-bold text-emerald-600">
-                      ৳{item.price * item.quantity}
-                    </div>
-                    <button
-                      onClick={() => removeFromCart(item.id)}
-                      className="text-red-400 hover:text-red-600"
-                    >
-                      <Trash2 size={18} />
-                    </button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* Shipping Selection */}
-          <div className="bg-white p-6 rounded-lg border border-slate-200">
-            <h3 className="font-bold mb-4 flex items-center gap-2">
-              <Truck size={20} className="text-emerald-500" /> Select Shipping
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div
-                onClick={() => setShippingMethod("inside")}
-                className={`p-4 border-2 rounded-xl cursor-pointer ${shippingMethod === "inside" ? "border-emerald-500 bg-emerald-50" : "border-slate-100"}`}
-              >
-                <div className="flex justify-between font-bold">
-                  <span>Inside Dhaka</span> <span>৳100</span>
-                </div>
-              </div>
-              <div
-                onClick={() => setShippingMethod("outside")}
-                className={`p-4 border-2 rounded-xl cursor-pointer ${shippingMethod === "outside" ? "border-emerald-500 bg-emerald-50" : "border-slate-100"}`}
-              >
-                <div className="flex justify-between font-bold">
-                  <span>Outside Dhaka</span> <span>৳130</span>
-                </div>
-              </div>
-            </div>
-          </div>
+      <div className="max-w-7xl mx-auto">
+        <div className="flex items-center gap-3 mb-8">
+          <h1 className="text-3xl font-black text-slate-900">Shopping Cart</h1>
+          {loading && (
+            <Loader2 className="animate-spin text-emerald-500" size={20} />
+          )}
         </div>
 
-        {/* Order Summary */}
-        <div className="lg:col-span-1">
-          <div className="bg-white p-6 rounded-lg shadow-sm border border-slate-200 sticky top-6">
-            <h2 className="text-xl font-bold mb-6">Order Summary</h2>
-            <div className="space-y-3 text-sm border-b pb-4">
-              <div className="flex justify-between">
-                <span>Subtotal</span>{" "}
-                <span className="font-bold">৳{subtotal}</span>
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+          {/* Cart Items List */}
+          <div className="lg:col-span-2 space-y-4">
+            <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
+              {/* Table Header (Desktop) */}
+              <div className="hidden md:grid grid-cols-12 p-6 bg-slate-50/50 border-b text-[10px] font-black uppercase tracking-widest text-slate-400">
+                <div className="col-span-6">Product Details</div>
+                <div className="col-span-3 text-center">Quantity</div>
+                <div className="col-span-3 text-right">Subtotal</div>
               </div>
-              <div className="flex justify-between">
-                <span>Shipping</span>{" "}
-                <span className="font-bold">৳{shippingCost}</span>
+
+              <div className="divide-y divide-slate-50">
+                {cart.map((item) => (
+                  <div
+                    key={item.id}
+                    className="p-6 grid grid-cols-1 md:grid-cols-12 items-center gap-4"
+                  >
+                    {/* Product Info */}
+                    <div className="col-span-6 flex items-center gap-4">
+                      <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100">
+                        <img
+                          src={item.image}
+                          alt={item.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-bold text-slate-800 line-clamp-1">
+                          {item.name}
+                        </h3>
+                        <p className="text-xs text-emerald-600 font-bold mt-1">
+                          PV: {item.point_value || 0}
+                        </p>
+                        <p className="text-xs text-slate-400 mt-1">
+                          ৳{Number(item.price).toLocaleString()}
+                        </p>
+                      </div>
+                    </div>
+
+                    {/* Quantity Controls */}
+                    <div className="col-span-3 flex justify-center">
+                      <div className="flex items-center bg-slate-50 rounded-xl p-1 border border-slate-100">
+                        <button
+                          onClick={() =>
+                            updateQuantity(item.id, item.cartItemId, -1)
+                          }
+                          className="p-1.5 hover:bg-white rounded-lg"
+                        >
+                          <Minus size={14} />
+                        </button>
+                        <span className="px-4 font-black text-slate-800">
+                          {item.quantity}
+                        </span>
+                        <button
+                          onClick={() =>
+                            updateQuantity(item.id, item.cartItemId, 1)
+                          }
+                          className="p-1.5 hover:bg-white rounded-lg"
+                        >
+                          <Plus size={14} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Subtotal & Delete */}
+                    <div className="col-span-3 text-right flex items-center justify-end gap-4">
+                      <span className="font-black text-slate-900 text-lg">
+                        ৳{(item.price * item.quantity).toLocaleString()}
+                      </span>
+
+                      <button
+                        onClick={() => removeFromCart(item.id, item.cartItemId)} // cartItemId যোগ করলি
+                        className="text-slate-300 hover:text-red-500 transition-colors"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
               </div>
             </div>
-            <div className="flex justify-between items-center py-4">
-              <span className="text-lg font-bold">Total</span>
-              <span className="text-2xl font-black text-emerald-600">
-                ৳{total}
-              </span>
+          </div>
+
+          {/* Checkout Summary Sidebar */}
+          <div className="lg:col-span-1">
+            <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 sticky top-6">
+              <h2 className="text-xl font-black text-slate-800 mb-6">
+                Summary
+              </h2>
+
+              <div className="flex justify-between items-center mb-8">
+                <span className="text-lg font-bold text-slate-500">
+                  Subtotal
+                </span>
+                <span className="text-3xl font-black text-slate-900">
+                  ৳{subtotal.toLocaleString()}
+                </span>
+              </div>
+
+              <p className="text-xs text-slate-400 mb-6 bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">
+                * Shipping and taxes will be calculated at checkout based on
+                your delivery address.
+              </p>
+
+              <Link
+                href="/checkout"
+                className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+              >
+                Go to Checkout <ArrowRight size={20} />
+              </Link>
+
+              <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
+                Price Securely Synced with Store
+              </div>
             </div>
-            <Link
-              href="/checkout"
-              className="w-full bg-[#009669] text-white py-4 rounded-lg font-bold text-center block shadow-lg"
-            >
-              Proceed to Checkout
-            </Link>
           </div>
         </div>
       </div>

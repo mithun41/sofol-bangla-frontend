@@ -20,7 +20,7 @@ export const authService = {
       if (access) {
         localStorage.setItem("token", access);
         localStorage.setItem("refresh_token", refresh);
-        // ডাটা লোকাল স্টোরেজে রাখা হচ্ছে যাতে রিফ্রেশ করলে পাওয়া যায়
+
         localStorage.setItem("user", JSON.stringify(userData));
       }
       return response.data;

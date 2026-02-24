@@ -1,11 +1,10 @@
 // src/services/reportService.js
-import api from "./api"; // তোর api.js ফাইলটা ইম্পোর্ট কর
+import api from "./api";
 
 const reportService = {
   getAdminMonthlyReport: async () => {
     try {
-      // এখানে আর ম্যানুয়ালি headers বা token দেওয়ার দরকার নেই
-      const response = await api.get("orders/admin/report-summary/");
+      const response = await api.get("accounts/admin/stats/");
       return response.data;
     } catch (error) {
       console.error("Error fetching admin report:", error);

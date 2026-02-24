@@ -59,7 +59,6 @@ export default function ProfilePage() {
           headers: { "Content-Type": "multipart/form-data" },
         });
 
-        // সাকসেস অ্যালার্ট শেষ হওয়ার পর রিলোড হবে
         await Swal.fire({
           icon: "success",
           title: "Success!",

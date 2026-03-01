@@ -18,6 +18,7 @@ import {
 } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import api from "@/services/api";
+import { useAuth } from "@/context/AuthContext";
 
 export default function UserLayout({ children }) {
   const [user, setUser] = useState(null);
@@ -26,6 +27,7 @@ export default function UserLayout({ children }) {
   const pathname = usePathname();
   const router = useRouter();
   const dropdownRef = useRef(null);
+  const { logout } = useAuth();
 
   useEffect(() => {
     const fetchUser = async () => {
@@ -63,12 +65,6 @@ export default function UserLayout({ children }) {
     { name: "My Orders", href: "/dashboard/user-order", icon: Bell },
     { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
-
-  const handleLogout = () => {
-    // Apnar logout logic ekhane hobe (e.g., cookie remove, token delete)
-    console.log("Logging out...");
-    router.push("/login");
-  };
 
   return (
     <div className="min-h-screen bg-[#F8FAFC]">
@@ -154,10 +150,11 @@ export default function UserLayout({ children }) {
                       <User className="w-4 h-4" /> Profile Settings
                     </Link>
                     <button
-                      onClick={handleLogout}
-                      className="w-full flex items-center gap-3 px-4 py-2.5 text-sm text-red-600 hover:bg-red-50 transition-colors"
+                      onClick={logout}
+                      className="w-full flex items-center gap-3 px-5 py-3 text-sm font-bold text-red-600 hover:bg-red-50 transition-all duration-200 border-t border-slate-100 mt-1"
                     >
-                      <LogOut className="w-4 h-4" /> Sign Out
+                      <LogOut size={18} strokeWidth={2.5} />
+                      <span>Sign Out</span>
                     </button>
                   </div>
                 )}

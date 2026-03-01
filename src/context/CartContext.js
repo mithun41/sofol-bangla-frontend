@@ -37,7 +37,7 @@ export const CartProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/cart/",
+        " https://mithun41.pythonanywhere.com/api/products/cart/",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -69,7 +69,7 @@ export const CartProvider = ({ children }) => {
     try {
       const ids = currentCart.map((item) => item.id);
       const response = await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/sync-cart/",
+        " https://mithun41.pythonanywhere.com/api/products/sync-cart/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -97,7 +97,7 @@ export const CartProvider = ({ children }) => {
     const token = getAuthToken();
     if (token) {
       try {
-        await fetch("https://mithun41.pythonanywhere.com/api/products/cart/", {
+        await fetch(" https://mithun41.pythonanywhere.com/api/products/cart/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -134,7 +134,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          ` https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
           {
             method: "PATCH",
             headers: {
@@ -165,7 +165,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          ` https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
@@ -190,7 +190,7 @@ export const CartProvider = ({ children }) => {
     if (token) {
       // ব্যাকএন্ডে কাস্টম 'clear' অ্যাকশন থাকলে সেটা কল করা যায়, নাহলে লুপ
       await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/cart/clear/",
+        " https://mithun41.pythonanywhere.com/api/products/cart/clear/",
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },

@@ -11,11 +11,11 @@ const nextConfig = {
       {
         protocol: "https",
         hostname: "mithun41.pythonanywhere.com",
-        port: "", // PythonAnywhere এ পোর্ট লাগে না
         pathname: "/media/**",
       },
     ],
   },
+  // eslint এবং typescript এর অপশনগুলো বাদ দিয়ে দাও যদি ওগুলো ওয়ার্নিং দেয়
 };
 
-module.exports = nextConfig;
+export default nextConfig;

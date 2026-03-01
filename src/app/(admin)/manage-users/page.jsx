@@ -49,7 +49,7 @@ export default function AdminDashboard() {
         placement_id_input: selectedUser.temp_placement_id || "",
       };
 
-      await authService.updateUser(selectedUser.id, payload);
+      await authService.updateUserByAdmin(selectedUser.id, payload);
 
       // সাকসেস অ্যালার্ট
       Swal.fire({

@@ -85,7 +85,7 @@ export default function CheckoutPage() {
 
     try {
       const response = await fetch(
-        "https://mithun41.pythonanywhere.com/api/orders/place-order/",
+        " https://mithun41.pythonanywhere.com/api/orders/place-order/",
         {
           method: "POST",
           headers: {

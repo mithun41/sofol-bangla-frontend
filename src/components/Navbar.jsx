@@ -15,6 +15,7 @@ import {
   ShoppingCart,
   Sparkles,
 } from "lucide-react";
+import Logo from "./Logo";
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -51,20 +52,7 @@ export default function Navbar() {
           {/* Logo & Desktop Nav */}
           <div className="flex items-center gap-12">
             {/* Logo */}
-            <Link
-              href="/"
-              className="group flex items-center gap-2.5 transition-all hover:scale-105"
-            >
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-emerald-500 to-blue-600 rounded-2xl blur-lg opacity-50 group-hover:opacity-75 transition-opacity"></div>
-                <div className="relative bg-gradient-to-r from-emerald-500 to-blue-600 p-2.5 rounded-2xl">
-                  <Sparkles className="w-6 h-6 text-white" strokeWidth={2.5} />
-                </div>
-              </div>
-              <span className="text-2xl font-black bg-gradient-to-r from-emerald-600 to-blue-600 bg-clip-text text-transparent tracking-tight">
-                SOFOL BANGLA
-              </span>
-            </Link>
+            <Logo size={70} />
 
             {/* Desktop Navigation */}
             <div className="hidden md:flex items-center gap-2">
@@ -255,7 +243,7 @@ export default function Navbar() {
                 href="/register"
                 className="text-center p-4 text-sm font-black bg-gradient-to-r from-emerald-600 to-blue-600 text-white rounded-2xl shadow-lg hover:shadow-xl transition-all duration-300"
               >
-                Join Now
+                Register
               </Link>
             </div>
           )}

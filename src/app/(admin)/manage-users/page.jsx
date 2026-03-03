@@ -1,5 +1,5 @@
 "use client";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import api from "@/services/api";
 import { authService } from "@/services/authService";
 import Swal from "sweetalert2";
@@ -10,6 +10,10 @@ export default function AdminDashboard() {
   const [showModal, setShowModal] = useState(false);
   const [loading, setLoading] = useState(false);
   const [searchTerm, setSearchTerm] = useState("");
+
+  // ✅ Pagination
+  const USERS_PER_PAGE = 20;
+  const [currentPage, setCurrentPage] = useState(1);
 
   const fetchUsers = async () => {
     try {
@@ -24,10 +28,14 @@ export default function AdminDashboard() {
     fetchUsers();
   }, []);
 
+  // ✅ Reset page when search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [searchTerm]);
+
   const handleUpdate = async (e) => {
     e.preventDefault();
 
-    // কনফার্মেশন প্রম্পট (ঐচ্ছিক কিন্তু প্রফেশনাল)
     const result = await Swal.fire({
       title: "Are you sure?",
       text: `You are updating settings for ${selectedUser.username}`,
@@ -43,7 +51,6 @@ export default function AdminDashboard() {
     setLoading(true);
     try {
       const payload = {
-        status: selectedUser.status,
         position: selectedUser.position,
         reff_id_input: selectedUser.temp_reff_id || "",
         placement_id_input: selectedUser.temp_placement_id || "",
@@ -51,7 +58,6 @@ export default function AdminDashboard() {
 
       await authService.updateUserByAdmin(selectedUser.id, payload);
 
-      // সাকসেস অ্যালার্ট
       Swal.fire({
         icon: "success",
         title: "Updated!",
@@ -65,7 +71,6 @@ export default function AdminDashboard() {
     } catch (err) {
       console.error("Update Error:", err.response?.data);
 
-      // এরর অ্যালার্ট
       Swal.fire({
         icon: "error",
         title: "Update Failed",
@@ -78,11 +83,52 @@ export default function AdminDashboard() {
     }
   };
 
-  const filteredUsers = users.filter(
-    (u) =>
-      u.username.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      u.phone.includes(searchTerm),
+  const filteredUsers = useMemo(() => {
+    const term = searchTerm.toLowerCase();
+    return users.filter(
+      (u) =>
+        (u.username || "").toLowerCase().includes(term) ||
+        (u.phone || "").includes(searchTerm),
+    );
+  }, [users, searchTerm]);
+
+  // ✅ Pagination calculations
+  const totalPages = Math.max(
+    1,
+    Math.ceil(filteredUsers.length / USERS_PER_PAGE),
   );
+  const safeCurrentPage = Math.min(currentPage, totalPages);
+
+  const paginatedUsers = useMemo(() => {
+    const start = (safeCurrentPage - 1) * USERS_PER_PAGE;
+    return filteredUsers.slice(start, start + USERS_PER_PAGE);
+  }, [filteredUsers, safeCurrentPage]);
+
+  const goToPage = (p) => setCurrentPage(Math.min(Math.max(1, p), totalPages));
+
+  // ✅ nice page buttons (show limited)
+  const pageButtons = useMemo(() => {
+    const pages = [];
+    const windowSize = 2; // current page এর দুই পাশে দেখাবে
+    const start = Math.max(1, safeCurrentPage - windowSize);
+    const end = Math.min(totalPages, safeCurrentPage + windowSize);
+
+    // Always show first
+    pages.push(1);
+
+    if (start > 2) pages.push("...");
+
+    for (let i = start; i <= end; i++) {
+      if (i !== 1 && i !== totalPages) pages.push(i);
+    }
+
+    if (end < totalPages - 1) pages.push("...");
+
+    if (totalPages !== 1) pages.push(totalPages);
+
+    // remove duplicates
+    return pages.filter((v, i, arr) => arr.indexOf(v) === i);
+  }, [safeCurrentPage, totalPages]);
 
   return (
     <div className="min-h-screen bg-gray-50 p-4 md:p-8">
@@ -113,8 +159,9 @@ export default function AdminDashboard() {
                   <th className="p-5 text-right">Action</th>
                 </tr>
               </thead>
+
               <tbody className="divide-y divide-gray-50">
-                {filteredUsers.map((u) => (
+                {paginatedUsers.map((u) => (
                   <tr
                     key={u.id}
                     className="hover:bg-slate-50/50 transition-colors"
@@ -125,6 +172,7 @@ export default function AdminDashboard() {
                       </div>
                       <div className="text-xs text-slate-400">{u.phone}</div>
                     </td>
+
                     <td className="p-5">
                       <div className="text-emerald-600 font-black text-sm">
                         ৳{u.balance}
@@ -133,6 +181,7 @@ export default function AdminDashboard() {
                         PTS: {u.points}
                       </div>
                     </td>
+
                     <td className="p-5">
                       <div className="text-xs font-mono bg-slate-100 px-2 py-1 rounded inline-block mb-1">
                         {u.reff_id}
@@ -141,6 +190,7 @@ export default function AdminDashboard() {
                         By: {u.referred_by_username || "Direct"}
                       </div>
                     </td>
+
                     <td className="p-5">
                       <div className="text-xs font-mono bg-slate-100 px-2 py-1 rounded inline-block mb-1">
                         {u.placement_id}
@@ -150,13 +200,19 @@ export default function AdminDashboard() {
                         {u.placement_under_username || "Root"}
                       </div>
                     </td>
+
                     <td className="p-5">
                       <span
-                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${u.status === "active" ? "bg-emerald-100 text-emerald-700" : "bg-rose-100 text-rose-600"}`}
+                        className={`px-3 py-1 rounded-full text-[10px] font-black uppercase ${
+                          u.status === "active"
+                            ? "bg-emerald-100 text-emerald-700"
+                            : "bg-rose-100 text-rose-600"
+                        }`}
                       >
                         {u.status}
                       </span>
                     </td>
+
                     <td className="p-5 text-right">
                       <button
                         onClick={() => {
@@ -174,8 +230,74 @@ export default function AdminDashboard() {
                     </td>
                   </tr>
                 ))}
+
+                {paginatedUsers.length === 0 && (
+                  <tr>
+                    <td colSpan={6} className="p-10 text-center text-slate-400">
+                      No users found.
+                    </td>
+                  </tr>
+                )}
               </tbody>
             </table>
+          </div>
+
+          {/* ✅ Pagination UI */}
+          <div className="flex flex-col md:flex-row items-center justify-between gap-3 p-4 border-t border-gray-100 bg-white">
+            <div className="text-xs text-slate-500 font-semibold">
+              Showing{" "}
+              <span className="text-slate-700">
+                {filteredUsers.length === 0
+                  ? 0
+                  : (safeCurrentPage - 1) * USERS_PER_PAGE + 1}
+              </span>{" "}
+              -{" "}
+              <span className="text-slate-700">
+                {Math.min(
+                  safeCurrentPage * USERS_PER_PAGE,
+                  filteredUsers.length,
+                )}
+              </span>{" "}
+              of <span className="text-slate-700">{filteredUsers.length}</span>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => goToPage(safeCurrentPage - 1)}
+                disabled={safeCurrentPage === 1}
+                className="px-3 py-2 text-xs font-black rounded-xl border border-gray-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Prev
+              </button>
+
+              {pageButtons.map((p, idx) =>
+                p === "..." ? (
+                  <span key={`dots-${idx}`} className="px-2 text-slate-400">
+                    ...
+                  </span>
+                ) : (
+                  <button
+                    key={p}
+                    onClick={() => goToPage(p)}
+                    className={`px-3 py-2 text-xs font-black rounded-xl border ${
+                      p === safeCurrentPage
+                        ? "bg-indigo-600 text-white border-indigo-600"
+                        : "bg-white text-slate-600 border-gray-200 hover:bg-slate-50"
+                    }`}
+                  >
+                    {p}
+                  </button>
+                ),
+              )}
+
+              <button
+                onClick={() => goToPage(safeCurrentPage + 1)}
+                disabled={safeCurrentPage === totalPages}
+                className="px-3 py-2 text-xs font-black rounded-xl border border-gray-200 bg-slate-50 hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed"
+              >
+                Next
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -191,21 +313,7 @@ export default function AdminDashboard() {
             </div>
 
             <form onSubmit={handleUpdate} className="p-8 space-y-5">
-              <div>
-                <label className="text-[10px] font-black text-slate-400 uppercase mb-2 block">
-                  Account Status
-                </label>
-                <select
-                  className="w-full p-3 rounded-xl border-2 border-slate-100 focus:border-indigo-500 outline-none font-bold text-slate-700 bg-slate-50"
-                  value={selectedUser.status}
-                  onChange={(e) =>
-                    setSelectedUser({ ...selectedUser, status: e.target.value })
-                  }
-                >
-                  <option value="inactive">Inactive 🔴</option>
-                  <option value="active">Active 🟢</option>
-                </select>
-              </div>
+              {/* ✅ Status field removed */}
 
               <div>
                 <label className="text-[10px] font-black text-indigo-600 uppercase mb-2 block">
@@ -247,6 +355,7 @@ export default function AdminDashboard() {
                     }
                   />
                 </div>
+
                 <div>
                   <label className="text-[10px] font-black text-slate-400 uppercase mb-1 block">
                     Update Placement ID
@@ -274,6 +383,7 @@ export default function AdminDashboard() {
                 >
                   CANCEL
                 </button>
+
                 <button
                   type="submit"
                   disabled={loading}

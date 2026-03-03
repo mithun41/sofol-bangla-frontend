@@ -7,9 +7,8 @@ import {
   Package,
   Search,
   Loader2,
-  Star, // Featured এর জন্য
+  Star,
 } from "lucide-react";
-// productService এ updateProduct ফাংশনটি থাকতে হবে
 import {
   getAllProducts,
   deleteProduct,
@@ -43,24 +42,21 @@ export default function ManageProducts() {
     loadProducts();
   }, []);
 
-  // --- Featured Toggle Logic ---
   const toggleFeatured = async (product) => {
     const newStatus = !product.is_featured;
-    // UI দ্রুত আপডেট করার জন্য (Optimistic Update)
+
     const updatedProducts = products.map((p) =>
       p.id === product.id ? { ...p, is_featured: newStatus } : p,
     );
     setProducts(updatedProducts);
 
     try {
-      // ব্যাকএন্ডে আপডেট পাঠানো
       await updateProduct(product.id, { is_featured: newStatus });
       toast.success(newStatus ? "Added to Featured" : "Removed from Featured", {
         icon: "⭐",
         duration: 2000,
       });
     } catch (err) {
-      // এরর হলে আগের অবস্থায় ফিরিয়ে নেওয়া
       setProducts(products);
       toast.error("Failed to update featured status");
     }
@@ -81,6 +77,39 @@ export default function ManageProducts() {
   const filteredProducts = products.filter((p) =>
     p.name.toLowerCase().includes(searchTerm.toLowerCase()),
   );
+
+  // ✅ Stock badge helper
+  const getStockBadge = (stockRaw) => {
+    const stock = Number(stockRaw ?? 0);
+
+    if (stock <= 0) {
+      return {
+        label: "Out of Stock",
+        countClass:
+          "bg-rose-100 text-rose-700 dark:bg-rose-900/30 dark:text-rose-200",
+        tagClass:
+          "text-rose-700 dark:text-rose-200 bg-rose-50 dark:bg-rose-900/20 border border-rose-100 dark:border-rose-900/30",
+      };
+    }
+
+    if (stock < 3) {
+      return {
+        label: "Low Stock",
+        countClass:
+          "bg-amber-100 text-amber-800 dark:bg-amber-900/30 dark:text-amber-200",
+        tagClass:
+          "text-amber-800 dark:text-amber-200 bg-amber-50 dark:bg-amber-900/20 border border-amber-100 dark:border-amber-900/30",
+      };
+    }
+
+    return {
+      label: "In Stock",
+      countClass:
+        "bg-emerald-100 text-emerald-800 dark:bg-emerald-900/30 dark:text-emerald-200",
+      tagClass:
+        "text-emerald-800 dark:text-emerald-200 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-900/30",
+    };
+  };
 
   return (
     <div className="space-y-6">
@@ -134,6 +163,9 @@ export default function ManageProducts() {
                   Product Info
                 </th>
                 <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
+                  Stock
+                </th>
+                <th className="px-6 py-4 text-[10px] font-black uppercase text-slate-400 tracking-widest">
                   Price & Point
                 </th>
                 <th className="px-6 py-4 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">
@@ -141,79 +173,116 @@ export default function ManageProducts() {
                 </th>
               </tr>
             </thead>
+
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
               {loading ? (
                 <tr>
-                  <td colSpan="4" className="py-20 text-center">
+                  <td colSpan="5" className="py-20 text-center">
                     <Loader2 className="animate-spin mx-auto text-blue-600" />
                   </td>
                 </tr>
               ) : (
-                filteredProducts.map((p) => (
-                  <tr
-                    key={p.id}
-                    className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all"
-                  >
-                    {/* --- Featured Toggle Star --- */}
-                    <td className="px-6 py-4">
-                      <button
-                        onClick={() => toggleFeatured(p)}
-                        className={`transition-all transform hover:scale-125 ${p.is_featured ? "text-amber-400" : "text-slate-300 dark:text-slate-700 hover:text-amber-200"}`}
-                      >
-                        <Star
-                          size={22}
-                          fill={p.is_featured ? "currentColor" : "none"}
-                        />
-                      </button>
-                    </td>
+                filteredProducts.map((p) => {
+                  const stock = Number(p.stock ?? 0);
+                  const badge = getStockBadge(stock);
 
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-3">
-                        <img
-                          src={p.image}
-                          className="w-10 h-10 rounded-lg object-cover bg-slate-100"
-                        />
-                        <div>
-                          <p className="font-bold text-slate-800 dark:text-white text-sm line-clamp-1">
-                            {p.name}
-                          </p>
-                          <p className="text-[10px] text-slate-400 uppercase font-bold">
-                            {p.category_name || "General"}
-                          </p>
+                  return (
+                    <tr
+                      key={p.id}
+                      className="hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all"
+                    >
+                      {/* Featured Toggle Star */}
+                      <td className="px-6 py-4">
+                        <button
+                          onClick={() => toggleFeatured(p)}
+                          className={`transition-all transform hover:scale-125 ${
+                            p.is_featured
+                              ? "text-amber-400"
+                              : "text-slate-300 dark:text-slate-700 hover:text-amber-200"
+                          }`}
+                        >
+                          <Star
+                            size={22}
+                            fill={p.is_featured ? "currentColor" : "none"}
+                          />
+                        </button>
+                      </td>
+
+                      {/* Product Info */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-3">
+                          <img
+                            src={p.image}
+                            className="w-10 h-10 rounded-lg object-cover bg-slate-100"
+                            alt={p.name}
+                          />
+                          <div>
+                            <p className="font-bold text-slate-800 dark:text-white text-sm line-clamp-1">
+                              {p.name}
+                            </p>
+                            <p className="text-[10px] text-slate-400 uppercase font-bold">
+                              {p.category_name || "General"}
+                            </p>
+                          </div>
                         </div>
-                      </div>
-                    </td>
+                      </td>
 
-                    <td className="px-6 py-4">
-                      <p className="font-black text-slate-800 dark:text-white">
-                        ৳{Math.floor(p.price)}
-                      </p>
-                      <p className="text-[10px] font-bold text-emerald-500">
-                        {p.point_value} PV Reward
-                      </p>
-                    </td>
+                      {/* ✅ Stock Column (with status) */}
+                      <td className="px-6 py-4">
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`inline-flex items-center px-3 py-1 rounded-full text-[11px] font-black ${badge.countClass}`}
+                          >
+                            {stock}
+                          </span>
+                          <span
+                            className={`inline-flex items-center px-2 py-1 rounded-full text-[10px] font-black uppercase ${badge.tagClass}`}
+                          >
+                            {badge.label}
+                          </span>
+                        </div>
 
-                    <td className="px-6 py-4 text-right">
-                      <div className="flex justify-end gap-2">
-                        <button
-                          onClick={() => {
-                            setSelectedProduct(p);
-                            setIsEditModalOpen(true);
-                          }}
-                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
-                        >
-                          <Edit size={18} />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(p.id)}
-                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
-                        >
-                          <Trash2 size={18} />
-                        </button>
-                      </div>
-                    </td>
-                  </tr>
-                ))
+                        {/* optional small hint */}
+                        {stock > 0 && stock < 2 && (
+                          <p className="text-[10px] text-slate-400 font-bold mt-1">
+                            Refill recommended
+                          </p>
+                        )}
+                      </td>
+
+                      {/* Price & Point */}
+                      <td className="px-6 py-4">
+                        <p className="font-black text-slate-800 dark:text-white">
+                          ৳{Math.floor(p.price)}
+                        </p>
+                        <p className="text-[10px] font-bold text-emerald-500">
+                          {p.point_value} PV Reward
+                        </p>
+                      </td>
+
+                      {/* Actions */}
+                      <td className="px-6 py-4 text-right">
+                        <div className="flex justify-end gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedProduct(p);
+                              setIsEditModalOpen(true);
+                            }}
+                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-lg transition-all"
+                          >
+                            <Edit size={18} />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(p.id)}
+                            className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-all"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                      </td>
+                    </tr>
+                  );
+                })
               )}
             </tbody>
           </table>

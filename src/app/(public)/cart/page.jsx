@@ -14,9 +14,9 @@ import Link from "next/link";
 export default function CartPage() {
   const { cart, updateQuantity, removeFromCart, loading } = useCart();
 
-  // ১. শুধুমাত্র সাবটোটাল ক্যালকুলেশন
+  // ১. গ্র্যান্ড সাবটোটাল ক্যালকুলেশন (এপিআই থেকে আসা item_subtotal ব্যবহার করে)
   const subtotal = cart.reduce(
-    (acc, item) => acc + Number(item.price || 0) * item.quantity,
+    (acc, item) => acc + Number(item.item_subtotal || 0),
     0,
   );
 
@@ -26,7 +26,7 @@ export default function CartPage() {
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
         <Loader2 className="animate-spin text-emerald-500 mb-4" size={48} />
         <p className="text-slate-600 font-bold animate-pulse">
-          Syncing your cart...
+          Syncing your cart with server...
         </p>
       </div>
     );
@@ -40,16 +40,16 @@ export default function CartPage() {
           <ShoppingBag size={80} className="text-slate-200" />
         </div>
         <h2 className="text-2xl font-bold text-slate-800">
-          Your cart is empty!
+          আপনার কার্টটি খালি!
         </h2>
         <p className="text-slate-500 mt-2 text-center">
-          Looks like you haven't added anything yet.
+          কেনাকাটা শুরু করতে নিচের বাটনে ক্লিক করুন।
         </p>
         <Link
           href="/shop"
-          className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all"
+          className="mt-8 bg-slate-900 text-white px-8 py-3 rounded-xl font-bold hover:bg-slate-800 transition-all shadow-lg"
         >
-          Start Shopping
+          কেনাকাটা শুরু করুন
         </Link>
       </div>
     );
@@ -71,22 +71,22 @@ export default function CartPage() {
             <div className="bg-white rounded-3xl shadow-sm border border-slate-100 overflow-hidden">
               {/* Table Header (Desktop) */}
               <div className="hidden md:grid grid-cols-12 p-6 bg-slate-50/50 border-b text-[10px] font-black uppercase tracking-widest text-slate-400">
-                <div className="col-span-6">Product Details</div>
-                <div className="col-span-3 text-center">Quantity</div>
-                <div className="col-span-3 text-right">Subtotal</div>
+                <div className="col-span-6">প্রোডাক্ট ডিটেইলস</div>
+                <div className="col-span-3 text-center">পরিমাণ</div>
+                <div className="col-span-3 text-right">সাবটোটাল</div>
               </div>
 
               <div className="divide-y divide-slate-50">
                 {cart.map((item) => (
                   <div
-                    key={item.id}
-                    className="p-6 grid grid-cols-1 md:grid-cols-12 items-center gap-4"
+                    key={item.cartItemId || item.id}
+                    className="p-6 grid grid-cols-1 md:grid-cols-12 items-center gap-4 hover:bg-slate-50/50 transition-colors"
                   >
                     {/* Product Info */}
                     <div className="col-span-6 flex items-center gap-4">
                       <div className="w-20 h-20 bg-slate-100 rounded-2xl overflow-hidden flex-shrink-0 border border-slate-100">
                         <img
-                          src={item.image}
+                          src={item.image} // Context-এ যেভাবে ম্যাপ করেছিস
                           alt={item.name}
                           className="w-full h-full object-cover"
                         />
@@ -95,12 +95,14 @@ export default function CartPage() {
                         <h3 className="font-bold text-slate-800 line-clamp-1">
                           {item.name}
                         </h3>
-                        <p className="text-xs text-emerald-600 font-bold mt-1">
-                          PV: {item.point_value || 0}
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          ৳{Number(item.price).toLocaleString()}
-                        </p>
+                        <div className="flex flex-col gap-1 mt-1">
+                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 w-fit px-2 py-0.5 rounded-md">
+                            PV: {item.point_value || 0}
+                          </span>
+                          <span className="text-sm font-medium text-slate-400">
+                            একক মূল্য: ৳{Number(item.price).toLocaleString()}
+                          </span>
+                        </div>
                       </div>
                     </div>
 
@@ -111,11 +113,12 @@ export default function CartPage() {
                           onClick={() =>
                             updateQuantity(item.id, item.cartItemId, -1)
                           }
-                          className="p-1.5 hover:bg-white rounded-lg"
+                          disabled={item.quantity <= 1}
+                          className="p-1.5 hover:bg-white rounded-lg disabled:opacity-30"
                         >
                           <Minus size={14} />
                         </button>
-                        <span className="px-4 font-black text-slate-800">
+                        <span className="px-4 font-black text-slate-800 w-8 text-center">
                           {item.quantity}
                         </span>
                         <button
@@ -131,15 +134,17 @@ export default function CartPage() {
 
                     {/* Subtotal & Delete */}
                     <div className="col-span-3 text-right flex items-center justify-end gap-4">
-                      <span className="font-black text-slate-900 text-lg">
-                        ৳{(item.price * item.quantity).toLocaleString()}
-                      </span>
+                      <div className="text-right">
+                        <span className="block font-black text-slate-900 text-lg">
+                          ৳{Number(item.item_subtotal).toLocaleString()}
+                        </span>
+                      </div>
 
                       <button
-                        onClick={() => removeFromCart(item.id, item.cartItemId)} // cartItemId যোগ করলি
-                        className="text-slate-300 hover:text-red-500 transition-colors"
+                        onClick={() => removeFromCart(item.id, item.cartItemId)}
+                        className="text-slate-300 hover:text-red-500 p-2 hover:bg-red-50 rounded-xl transition-all"
                       >
-                        <Trash2 size={18} />
+                        <Trash2 size={20} />
                       </button>
                     </div>
                   </div>
@@ -152,33 +157,42 @@ export default function CartPage() {
           <div className="lg:col-span-1">
             <div className="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100 sticky top-6">
               <h2 className="text-xl font-black text-slate-800 mb-6">
-                Summary
+                অর্ডার সামারি
               </h2>
 
-              <div className="flex justify-between items-center mb-8">
-                <span className="text-lg font-bold text-slate-500">
-                  Subtotal
-                </span>
-                <span className="text-3xl font-black text-slate-900">
-                  ৳{subtotal.toLocaleString()}
-                </span>
+              <div className="space-y-4 mb-8">
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">সাবটোটাল</span>
+                  <span className="text-slate-900 font-bold">
+                    ৳{subtotal.toLocaleString()}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-slate-500 font-medium">
+                    ডেলিভারি চার্জ
+                  </span>
+                  <span className="text-slate-400 text-sm italic">
+                    চেকআউট পেজে যুক্ত হবে
+                  </span>
+                </div>
+                <div className="pt-4 border-t border-slate-100 flex justify-between items-center">
+                  <span className="text-lg font-black text-slate-800">মোট</span>
+                  <span className="text-3xl font-black text-emerald-600">
+                    ৳{subtotal.toLocaleString()}
+                  </span>
+                </div>
               </div>
-
-              <p className="text-xs text-slate-400 mb-6 bg-slate-50 p-3 rounded-xl border border-dashed border-slate-200">
-                * Shipping and taxes will be calculated at checkout based on
-                your delivery address.
-              </p>
 
               <Link
                 href="/checkout"
-                className="w-full bg-emerald-600 text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-2 hover:bg-emerald-700 transition-all shadow-xl shadow-emerald-100"
+                className="w-full bg-slate-900 text-white py-5 rounded-2xl font-black text-center flex items-center justify-center gap-2 hover:bg-slate-800 transition-all shadow-xl shadow-slate-200"
               >
-                Go to Checkout <ArrowRight size={20} />
+                চেকআউট করুন <ArrowRight size={20} />
               </Link>
 
               <div className="mt-6 flex items-center justify-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 <span className="w-2 h-2 bg-emerald-500 rounded-full animate-pulse" />
-                Price Securely Synced with Store
+                Real-time Price Synced
               </div>
             </div>
           </div>

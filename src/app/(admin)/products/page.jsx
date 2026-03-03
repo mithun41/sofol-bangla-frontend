@@ -92,7 +92,7 @@ export default function ManageProducts() {
       };
     }
 
-    if (stock < 3) {
+    if (stock < 5) {
       return {
         label: "Low Stock",
         countClass:

@@ -11,16 +11,13 @@ export const CartProvider = ({ children }) => {
   const getAuthToken = () =>
     typeof window !== "undefined" ? localStorage.getItem("access") : null;
 
-  // ২. অ্যাপ লোড হওয়ার সময় ডাটা নিয়ে আসা (Initial Sync)
+  // ২. অ্যাপ লোড হওয়ার সময় ডাটা নিয়ে আসা (Initial Sync)
   useEffect(() => {
     const initCart = async () => {
       const token = getAuthToken();
-
       if (token) {
-        // ইউজার লগইন থাকলে ডাটাবেস থেকে কার্ট আনো
         await fetchDatabaseCart(token);
       } else {
-        // গেস্ট হলে লোকাল স্টোরেজ থেকে নাও এবং sync-cart এপিআই দিয়ে চেক করো
         const savedCart = localStorage.getItem("cart");
         if (savedCart) {
           const parsedCart = JSON.parse(savedCart);
@@ -37,22 +34,24 @@ export const CartProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await fetch(
-        " https://mithun41.pythonanywhere.com/api/products/cart/",
+        "https://mithun41.pythonanywhere.com/api/products/cart/",
         {
           headers: { Authorization: `Bearer ${token}` },
         },
       );
       if (res.ok) {
         const data = await res.json();
+
         // ব্যাকএন্ড থেকে আসা ডাটাকে ফ্রন্টএন্ডের ফরম্যাটে ম্যাপিং
         const formattedCart = data.map((item) => ({
-          id: item.product,
-          cartItemId: item.id, // এটি ডাটাবেসের কার্ট রো আইডি (ডিলিট/আপডেটের জন্য)
+          id: item.product, // প্রোডাক্ট আইডি
+          cartItemId: item.id, // ডাটাবেসের কার্ট রো আইডি
           name: item.product_name,
           price: item.product_price,
           image: item.product_image,
           quantity: item.quantity,
           point_value: item.product_pv,
+          item_subtotal: item.item_subtotal, // এইটা মিসিং ছিল মামা! এইটা না থাকলে NaN দেখায়
         }));
         setCart(formattedCart);
       }
@@ -63,13 +62,13 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // ৪. গেস্ট কার্ট সিঙ্ক (লগইন ছাড়া ইউজার)
+  // ৪. গেস্ট কার্ট সিঙ্ক (লগইন ছাড়া ইউজার)
   const syncGuestCart = async (currentCart) => {
     if (!currentCart.length) return;
     try {
       const ids = currentCart.map((item) => item.id);
       const response = await fetch(
-        " https://mithun41.pythonanywhere.com/api/products/sync-cart/",
+        "https://mithun41.pythonanywhere.com/api/products/sync-cart/",
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -80,9 +79,17 @@ export const CartProvider = ({ children }) => {
         const latestProducts = await response.json();
         const updatedCart = currentCart.map((cartItem) => {
           const dbProduct = latestProducts.find((p) => p.id === cartItem.id);
-          return dbProduct
-            ? { ...cartItem, ...dbProduct, price: dbProduct.price }
-            : cartItem;
+          // গেস্ট কার্টেও item_subtotal ক্যালকুলেট করে রাখা ভালো
+          if (dbProduct) {
+            const price = dbProduct.price;
+            return {
+              ...cartItem,
+              ...dbProduct,
+              price: price,
+              item_subtotal: price * cartItem.quantity,
+            };
+          }
+          return cartItem;
         });
         setCart(updatedCart);
         localStorage.setItem("cart", JSON.stringify(updatedCart));
@@ -97,7 +104,7 @@ export const CartProvider = ({ children }) => {
     const token = getAuthToken();
     if (token) {
       try {
-        await fetch(" https://mithun41.pythonanywhere.com/api/products/cart/", {
+        await fetch("https://mithun41.pythonanywhere.com/api/products/cart/", {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -112,18 +119,30 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart((prev) => {
         const existing = prev.find((i) => i.id === product.id);
-        const newCart = existing
-          ? prev.map((i) =>
-              i.id === product.id ? { ...i, quantity: i.quantity + 1 } : i,
-            )
-          : [...prev, { ...product, quantity: 1 }];
+        let newCart;
+        if (existing) {
+          newCart = prev.map((i) =>
+            i.id === product.id
+              ? {
+                  ...i,
+                  quantity: i.quantity + 1,
+                  item_subtotal: (i.quantity + 1) * i.price,
+                }
+              : i,
+          );
+        } else {
+          newCart = [
+            ...prev,
+            { ...product, quantity: 1, item_subtotal: product.price },
+          ];
+        }
         localStorage.setItem("cart", JSON.stringify(newCart));
         return newCart;
       });
     }
   };
 
-  // ৬. কোয়ান্টিটি আপডেট করা (Plus/Minus)
+  // ৬. কোয়ান্টিটি আপডেট করা (Plus/Minus)
   const updateQuantity = async (id, cartItemId, change) => {
     const token = getAuthToken();
     const currentItem = cart.find((i) => i.id === id);
@@ -134,7 +153,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          ` https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
           {
             method: "PATCH",
             headers: {
@@ -151,7 +170,9 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart((prev) => {
         const updated = prev.map((i) =>
-          i.id === id ? { ...i, quantity: newQty } : i,
+          i.id === id
+            ? { ...i, quantity: newQty, item_subtotal: newQty * i.price }
+            : i,
         );
         localStorage.setItem("cart", JSON.stringify(updated));
         return updated;
@@ -165,7 +186,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          ` https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
@@ -188,9 +209,8 @@ export const CartProvider = ({ children }) => {
   const clearCart = async () => {
     const token = getAuthToken();
     if (token) {
-      // ব্যাকএন্ডে কাস্টম 'clear' অ্যাকশন থাকলে সেটা কল করা যায়, নাহলে লুপ
       await fetch(
-        " https://mithun41.pythonanywhere.com/api/products/cart/clear/",
+        "https://mithun41.pythonanywhere.com/api/products/cart/clear/",
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },
@@ -219,7 +239,6 @@ export const CartProvider = ({ children }) => {
   );
 };
 
-// এই সেই হুক যেটা তুই এক্সপোর্ট করতে ভুলে গিয়েছিলে মামা!
 export const useCart = () => {
   const context = useContext(CartContext);
   if (!context) {

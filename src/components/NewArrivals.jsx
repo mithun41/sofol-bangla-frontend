@@ -23,6 +23,7 @@ export default function NewArrivals() {
           ? res.data
           : res.data.results;
 
+        // লেটেস্ট ৬টি প্রোডাক্ট নেওয়া হচ্ছে
         setProducts((allProducts || []).slice(0, 6));
       } catch (err) {
         console.error("Data loading failed", err);
@@ -36,13 +37,17 @@ export default function NewArrivals() {
   const handleAddToCart = (p) => {
     const originalPrice = Number(p.price || 0);
     const pointValue = Number(p.point_value || 0);
+
+    // ✅ ১ পয়েন্ট = ২ টাকা ডিসকাউন্ট লজিক
+    const discount = pointValue * 2;
     const finalPrice = isActiveMember
-      ? originalPrice - pointValue
+      ? originalPrice - discount
       : originalPrice;
 
     const cartItem = {
       ...p,
       price: finalPrice,
+      // মেম্বার হলে পয়েন্ট ০ পাবে কারণ সে অলরেডি ক্যাশ ডিসকাউন্ট ডাবল পেয়েছে
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
@@ -64,7 +69,7 @@ export default function NewArrivals() {
     <section className="py-12 px-4 max-w-[1400px] mx-auto bg-white">
       <Toaster />
 
-      {/* Header - ইমেজ এর মতো টাইটেল ও সাবটাইটেল */}
+      {/* Header */}
       <div className="mb-10">
         <div className="flex items-center justify-between">
           <div>
@@ -88,24 +93,26 @@ export default function NewArrivals() {
         </div>
       </div>
 
-      {/* Grid - রেসপন্সিভ ৬ কলাম লেআউট */}
+      {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
         {products.map((p) => {
           const pointVal = Number(p.point_value || 0);
           const originalPrice = Number(p.price || 0);
+
+          // ✅ ডিসপ্লে প্রাইস ক্যালকুলেশনে ২ গুণ অফার সেট
+          const discount = pointVal * 2;
           const displayPrice = isActiveMember
-            ? originalPrice - pointVal
+            ? originalPrice - discount
             : originalPrice;
 
           return (
             <div key={p.id} className="group flex flex-col">
-              {/* Image Container - Rounded Corners like photo */}
               <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] mb-3 border border-transparent group-hover:border-slate-200 transition-all">
-                {/* Point/Discount Badge - Top Left */}
+                {/* ✅ ব্যাজ লজিক আপডেট */}
                 {pointVal > 0 && (
                   <div className="absolute top-2 left-2 z-10">
                     <span className="bg-[#E11D48] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                      {isActiveMember ? `৳${pointVal} OFF` : `+${pointVal} PV`}
+                      {isActiveMember ? `৳${discount} OFF` : `+${pointVal} PV`}
                     </span>
                   </div>
                 )}
@@ -118,7 +125,6 @@ export default function NewArrivals() {
                   />
                 </Link>
 
-                {/* Quick Add Overlay (Desktop) - Photo style */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="absolute bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm text-white py-3 font-bold text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2"
@@ -126,7 +132,6 @@ export default function NewArrivals() {
                   Quick Add +
                 </button>
 
-                {/* Mobile Cart Icon */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="md:hidden absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow-md active:scale-90 z-10"
@@ -135,7 +140,6 @@ export default function NewArrivals() {
                 </button>
               </div>
 
-              {/* Product Info - Left Aligned like photo */}
               <div className="flex flex-col text-left space-y-1">
                 <Link href={`/shop/${p.id}`}>
                   <h3 className="text-[13px] font-semibold text-slate-800 line-clamp-1 hover:text-emerald-600 transition-colors">
@@ -147,10 +151,19 @@ export default function NewArrivals() {
                   <span className="text-[#E11D48] font-bold text-sm">
                     Tk {Math.floor(displayPrice).toLocaleString()}
                   </span>
-                  {pointVal > 0 && (
+
+                  {/* ✅ মেম্বার হলে এবং ডিসকাউন্ট থাকলে কাটাকাটি দাম দেখাবে */}
+                  {isActiveMember && discount > 0 ? (
                     <span className="text-slate-400 text-[11px] line-through">
                       Tk {originalPrice.toLocaleString()}
                     </span>
+                  ) : (
+                    !isActiveMember &&
+                    pointVal > 0 && (
+                      <span className="text-slate-400 text-[11px]">
+                        (Original Price)
+                      </span>
+                    )
                   )}
                 </div>
               </div>

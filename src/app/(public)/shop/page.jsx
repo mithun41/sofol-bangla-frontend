@@ -57,7 +57,7 @@ function sortProducts(products, sortBy) {
 
 function getEffectivePrice(product, isActiveMember) {
   const base = Number(product.price || 0);
-  const discount = Number(product.point_value || 0);
+  const discount = Number(product.point_value || 0) * 2;
   return isActiveMember ? Math.max(0, base - discount) : base;
 }
 
@@ -155,7 +155,7 @@ function PriceRangeSlider({
 }
 
 function ProductCard({ product, isActiveMember, onAddToCart, onOrderNow }) {
-  const discount = Number(product.point_value || 0);
+  const discount = Number(product.point_value || 0) * 2;
   const finalPrice = isActiveMember
     ? Math.max(0, Number(product.price || 0) - discount)
     : Number(product.price || 0);
@@ -571,12 +571,12 @@ function ShopContent() {
       if (Number(p.stock || 0) <= 0) return;
 
       const finalPrice = getEffectivePrice(p, isActiveMember);
-      const discount = Number(p.point_value || 0);
+      const discountAmount = Number(p.point_value || 0) * 2;
 
       addToCart({
         ...p,
         price: finalPrice,
-        point_value: isActiveMember ? 0 : discount,
+        point_value: isActiveMember ? 0 : Number(p.point_value || 0),
         quantity: 1,
       });
 

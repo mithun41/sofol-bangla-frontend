@@ -23,7 +23,6 @@ export default function FeaturedProducts() {
           ? res.data
           : res.data.results;
 
-        // শুধুমাত্র is_featured: true ফিল্টার করে প্রথম ৬টি নেওয়া
         const featured = (allProducts || [])
           .filter((p) => p.is_featured === true)
           .slice(0, 6);
@@ -41,13 +40,17 @@ export default function FeaturedProducts() {
   const handleAddToCart = (p) => {
     const originalPrice = Number(p.price || 0);
     const pointValue = Number(p.point_value || 0);
+
+    // ✅ ১ পয়েন্ট = ২ টাকা অফার লজিক
+    const discount = pointValue * 2;
     const finalPrice = isActiveMember
-      ? originalPrice - pointValue
+      ? originalPrice - discount
       : originalPrice;
 
     const cartItem = {
       ...p,
       price: finalPrice,
+      // মেম্বার হলে পয়েন্ট পাবে না (০), ডিসকাউন্ট অলরেডি পেয়ে গেছে
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
@@ -69,7 +72,6 @@ export default function FeaturedProducts() {
     <section className="py-12 px-4 max-w-[1400px] mx-auto bg-white">
       <Toaster />
 
-      {/* Header - Image Style */}
       <div className="mb-10">
         <div className="flex items-center justify-between">
           <div>
@@ -96,24 +98,25 @@ export default function FeaturedProducts() {
         </div>
       </div>
 
-      {/* Grid - 6 Columns Layout */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
         {products.map((p) => {
           const pointVal = Number(p.point_value || 0);
           const originalPrice = Number(p.price || 0);
+
+          // ✅ ডিসপ্লে প্রাইস ক্যালকুলেশনে ২ গুণ অফার সেট
+          const discount = pointVal * 2;
           const displayPrice = isActiveMember
-            ? originalPrice - pointVal
+            ? originalPrice - discount
             : originalPrice;
 
           return (
             <div key={p.id} className="group flex flex-col">
-              {/* Image Container */}
               <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] mb-3 border border-transparent group-hover:border-slate-200 transition-all">
-                {/* Badge - Pink/Red Style from Photo */}
+                {/* ✅ ব্যাজ এও ২ গুণ ডিসকাউন্ট দেখাচ্ছি */}
                 {pointVal > 0 && (
                   <div className="absolute top-2 left-2 z-10">
                     <span className="bg-[#E11D48] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                      {isActiveMember ? `৳${pointVal} OFF` : `+${pointVal} PV`}
+                      {isActiveMember ? `৳${discount} OFF` : `+${pointVal} PV`}
                     </span>
                   </div>
                 )}
@@ -126,7 +129,6 @@ export default function FeaturedProducts() {
                   />
                 </Link>
 
-                {/* Quick Add Overlay */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="absolute bottom-0 left-0 right-0 bg-slate-900/80 backdrop-blur-sm text-white py-3 font-bold text-[10px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2"
@@ -134,7 +136,6 @@ export default function FeaturedProducts() {
                   Quick Add +
                 </button>
 
-                {/* Mobile Cart Icon */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="md:hidden absolute bottom-2 right-2 bg-white/90 p-2 rounded-full shadow-md active:scale-90 z-10"
@@ -143,7 +144,6 @@ export default function FeaturedProducts() {
                 </button>
               </div>
 
-              {/* Info - Left Aligned */}
               <div className="flex flex-col text-left space-y-1">
                 <Link href={`/shop/${p.id}`}>
                   <h3 className="text-[13px] font-semibold text-slate-800 line-clamp-1 hover:text-emerald-600 transition-colors">
@@ -155,7 +155,8 @@ export default function FeaturedProducts() {
                   <span className="text-[#E11D48] font-bold text-sm">
                     Tk {Math.floor(displayPrice).toLocaleString()}
                   </span>
-                  {pointVal > 0 && (
+                  {/* ✅ মেম্বার হলে এবং ডিসকাউন্ট থাকলে পুরনো দামটা স্ট্রাইক থ্রু দেখাবে */}
+                  {isActiveMember && discount > 0 && (
                     <span className="text-slate-400 text-[11px] line-through">
                       Tk {originalPrice.toLocaleString()}
                     </span>

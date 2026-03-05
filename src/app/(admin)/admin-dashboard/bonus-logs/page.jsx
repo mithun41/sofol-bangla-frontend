@@ -9,6 +9,7 @@ export default function BonusLogsPage() {
     const fetchLogs = async () => {
       try {
         const res = await api.get("accounts/bonus-logs/");
+        console.log("Full Response:", res.data);
         setLogs(res.data);
       } catch (err) {
         console.error("Failed to fetch logs");

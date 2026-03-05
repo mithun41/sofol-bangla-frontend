@@ -2,22 +2,40 @@
 import { useState, useEffect } from "react";
 import api from "@/services/api";
 import Swal from "sweetalert2";
+import {
+  Camera,
+  Save,
+  User,
+  Mail,
+  Phone,
+  Lock,
+  Hash,
+  AlertCircle,
+} from "lucide-react";
 
 export default function ProfilePage() {
   const [user, setUser] = useState(null);
-  const [newName, setNewName] = useState("");
-  const [selectedFile, setSelectedFile] = useState(null);
-  const [previewUrl, setPreviewUrl] = useState(null);
+  const [formData, setFormData] = useState({
+    name: "",
+    email: "",
+    phone: "",
+    password: "",
+  });
   const [loading, setLoading] = useState(false);
-  const [isEditingName, setIsEditingName] = useState(false);
+  const [errors, setErrors] = useState({}); // ফিল্ড স্পেসিফিক এরর দেখানোর জন্য
 
   const fetchProfile = async () => {
     try {
       const res = await api.get("accounts/profile/");
       setUser(res.data);
-      setNewName(res.data.name || "");
+      setFormData({
+        name: res.data.name || "",
+        email: res.data.email || "",
+        phone: res.data.phone || "",
+        password: "",
+      });
     } catch (err) {
-      console.error("Error fetching profile:", err);
+      toastError("Failed to load profile data.");
     }
   };
 
@@ -25,319 +43,277 @@ export default function ProfilePage() {
     fetchProfile();
   }, []);
 
+  // কমন এরর টোস্ট
+  const toastError = (message) => {
+    Swal.fire({
+      icon: "error",
+      title: "Oops...",
+      text: message,
+      confirmButtonColor: "#0F172A",
+    });
+  };
+
+  const handleInputChange = (e) => {
+    setFormData({ ...formData, [e.target.name]: e.target.value });
+    // ইউজার টাইপ করা শুরু করলে ওই ফিল্ডের এরর মুছে যাবে
+    if (errors[e.target.name]) {
+      setErrors({ ...errors, [e.target.name]: null });
+    }
+  };
+
   const handleFileChange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
 
-    const result = await Swal.fire({
-      title: "Update Profile Picture?",
-      text: "Do you want to update your profile picture?",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#0F172A",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "Yes, Update",
-      cancelButtonText: "Cancel",
-    });
+    // ফাইল সাইজ চেক (ঐচ্ছিক - ২MB এর বেশি হলে আটকাবে)
+    if (file.size > 2 * 1024 * 1024) {
+      return toastError("File is too large! Please select an image under 2MB.");
+    }
 
-    if (result.isConfirmed) {
+    const data = new FormData();
+    data.append("profile_picture", file);
+
+    try {
       setLoading(true);
-      Swal.fire({
-        title: "Uploading...",
-        didOpen: () => {
-          Swal.showLoading();
-        },
-        allowOutsideClick: false,
+      await api.patch("/accounts/profile/update/", data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
-
-      const formData = new FormData();
-      formData.append("name", user.name || "");
-      formData.append("profile_picture", file);
-
-      try {
-        await api.patch("/accounts/profile/", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
-
-        await Swal.fire({
-          icon: "success",
-          title: "Success!",
-          text: "Profile picture updated successfully.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-
-        window.location.reload(); // এখানে রিলোড হবে
-      } catch (err) {
-        Swal.fire({
-          icon: "error",
-          title: "Oops!",
-          text: "Failed to update profile picture.",
-        });
-      } finally {
-        setLoading(false);
-      }
+      Swal.fire({
+        icon: "success",
+        title: "Photo Updated!",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      fetchProfile();
+    } catch (err) {
+      toastError("Failed to upload photo. Make sure it's an image file.");
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleNameUpdate = async () => {
-    if (!newName.trim() || newName === user.name) {
-      setIsEditingName(false);
-      return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setErrors({}); // আগের সব এরর ক্লিয়ার করা
+
+    const data = new FormData();
+    data.append("name", formData.name);
+    data.append("email", formData.email);
+    data.append("phone", formData.phone);
+    if (formData.password?.trim()) {
+      data.append("password", formData.password);
     }
 
-    const result = await Swal.fire({
-      title: "Update Name?",
-      text: `Change name to "${newName}"?`,
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonColor: "#0F172A",
-      cancelButtonColor: "#64748b",
-      confirmButtonText: "Yes, Update",
-      cancelButtonText: "Cancel",
-    });
-
-    if (result.isConfirmed) {
-      setLoading(true);
-      Swal.fire({
-        title: "Updating...",
-        didOpen: () => {
-          Swal.showLoading();
-        },
-        allowOutsideClick: false,
+    try {
+      await api.patch("/accounts/profile/update/", data, {
+        headers: { "Content-Type": "multipart/form-data" },
       });
 
-      const formData = new FormData();
-      formData.append("name", newName);
+      await Swal.fire({
+        icon: "success",
+        title: "Success!",
+        text: "Profile updated successfully.",
+        timer: 2000,
+        showConfirmButton: false,
+      });
 
-      try {
-        await api.patch("/accounts/profile/", formData, {
-          headers: { "Content-Type": "multipart/form-data" },
-        });
+      // রিফ্রেশ করার বদলে ডাটা আবার ফেচ করা ভালো, তবে তুই চাইলে reload ও রাখতে পারিস
+      fetchProfile();
+    } catch (err) {
+      if (err.response?.status === 400) {
+        const serverErrors = err.response.data;
+        setErrors(serverErrors);
 
-        await Swal.fire({
-          icon: "success",
-          title: "Success!",
-          text: "Name updated successfully.",
-          timer: 1500,
-          showConfirmButton: false,
-        });
+        // প্রথম যে এররটা পাবে সেটাকে মেসেজ হিসেবে দেখাবে
+        const firstErrorKey = Object.keys(serverErrors)[0];
+        const errorMessage = serverErrors[firstErrorKey][0];
 
-        window.location.reload(); // পেজ রিলোড হবে যাতে হেডার আপডেট হয়
-      } catch (err) {
-        Swal.fire({
-          icon: "error",
-          title: "Oops!",
-          text: "Failed to update name.",
-        });
-      } finally {
-        setLoading(false);
-        setIsEditingName(false);
+        // এখানে generic মেসেজ না দিয়ে সরাসরি ব্যাকএন্ডের এরর দেখাচ্ছি
+        toastError(
+          `${firstErrorKey.charAt(0).toUpperCase() + firstErrorKey.slice(1)}: ${errorMessage}`,
+        );
+      } else {
+        toastError("Something went wrong. Please try again later.");
       }
-    } else {
-      setNewName(user.name || "");
-      setIsEditingName(false);
+    } finally {
+      setLoading(false);
     }
   };
 
   if (!user)
     return (
-      <div className="flex justify-center items-center min-h-screen">
+      <div className="flex flex-col items-center justify-center min-h-[60vh] gap-4">
         <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-slate-900"></div>
+        <p className="text-slate-500 font-bold animate-pulse">
+          Loading Profile...
+        </p>
       </div>
     );
 
   return (
-    <div className="p-4 md:p-8 max-w-4xl mx-auto">
-      <div className="bg-white rounded-3xl shadow-xl border border-slate-100 overflow-hidden">
+    <div className="p-4 md:p-8 max-w-3xl mx-auto">
+      <div className="bg-white rounded-[2rem] shadow-2xl border border-slate-100 overflow-hidden">
         {/* Header Section */}
-        <div className="bg-gradient-to-r from-slate-900 to-slate-700 px-8 py-6">
-          <h2 className="text-2xl font-bold text-white">Profile Settings</h2>
-          <p className="text-slate-300 text-sm mt-1">
-            Manage your account information
-          </p>
-        </div>
+        <div className="bg-slate-900 px-8 py-10 text-center relative">
+          {/* Active/Inactive Status Badge */}
+          <div className="absolute top-6 right-6">
+            <div
+              className={`flex items-center gap-2 px-3 py-1.5 rounded-full border shadow-sm ${
+                user.is_active || user.status === "active"
+                  ? "bg-emerald-500/10 border-emerald-500/50 text-emerald-400"
+                  : "bg-rose-500/10 border-rose-500/50 text-rose-400"
+              }`}
+            >
+              <span
+                className={`w-2 h-2 rounded-full ${
+                  user.is_active || user.status === "active"
+                    ? "bg-emerald-500 animate-pulse"
+                    : "bg-rose-500"
+                }`}
+              ></span>
+              <span className="text-[10px] font-black uppercase tracking-widest">
+                {user.is_active || user.status === "active"
+                  ? "Active Account"
+                  : "Inactive"}
+              </span>
+            </div>
+          </div>
 
-        <div className="p-8">
-          {/* Profile Photo Section */}
-          <div className="flex flex-col md:flex-row gap-8 items-start mb-8">
-            {/* Profile Picture */}
-            <div className="relative group">
-              <img
-                src={
-                  previewUrl || user.profile_picture || "/default-avatar.png"
-                }
-                className="w-32 h-32 rounded-full object-cover border-4 border-slate-100 shadow-lg"
-                alt="Profile"
-              />
-              <label
-                htmlFor="photo-upload"
-                className="absolute inset-0 flex items-center justify-center bg-black bg-opacity-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity cursor-pointer"
-              >
-                <svg
-                  className="w-8 h-8 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z"
-                  />
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M15 13a3 3 0 11-6 0 3 3 0 016 0z"
-                  />
-                </svg>
-              </label>
+          {/* Profile Picture & Other Info */}
+          <div className="relative inline-block group">
+            <img
+              src={user.profile_picture || "/default-avatar.png"}
+              className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-2xl mx-auto"
+              alt="Profile"
+            />
+            <label className="absolute bottom-0 right-0 bg-blue-600 p-2.5 rounded-full cursor-pointer hover:scale-110 transition shadow-lg border-2 border-white">
+              <Camera size={18} className="text-white" />
               <input
-                id="photo-upload"
                 type="file"
-                accept="image/*"
                 className="hidden"
                 onChange={handleFileChange}
                 disabled={loading}
+                accept="image/*"
               />
-            </div>
-
-            {/* User Info */}
-            <div className="flex-1">
-              {/* Name Field */}
-              <div className="mb-4">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                  Full Name
-                </label>
-                {isEditingName ? (
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      className="flex-1 px-4 py-2 rounded-lg border-2 border-slate-900 focus:ring-2 focus:ring-slate-900 outline-none text-lg font-semibold"
-                      value={newName}
-                      onChange={(e) => setNewName(e.target.value)}
-                      onKeyDown={(e) => {
-                        if (e.key === "Enter") handleNameUpdate();
-                        if (e.key === "Escape") {
-                          setNewName(user.name || "");
-                          setIsEditingName(false);
-                        }
-                      }}
-                      autoFocus
-                      disabled={loading}
-                    />
-                    <button
-                      onClick={handleNameUpdate}
-                      className="px-4 py-2 bg-slate-900 text-white rounded-lg font-semibold hover:bg-slate-800 transition-colors"
-                      disabled={loading}
-                    >
-                      Save
-                    </button>
-                    <button
-                      onClick={() => {
-                        setNewName(user.name || "");
-                        setIsEditingName(false);
-                      }}
-                      className="px-4 py-2 bg-slate-200 text-slate-700 rounded-lg font-semibold hover:bg-slate-300 transition-colors"
-                      disabled={loading}
-                    >
-                      Cancel
-                    </button>
-                  </div>
-                ) : (
-                  <div
-                    onClick={() => setIsEditingName(true)}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg hover:bg-slate-50 cursor-pointer group transition-colors"
-                  >
-                    <h3 className="text-2xl font-bold text-slate-900">
-                      {user.name || user.username}
-                    </h3>
-                    <svg
-                      className="w-5 h-5 text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity"
-                      fill="none"
-                      stroke="currentColor"
-                      viewBox="0 0 24 24"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"
-                      />
-                    </svg>
-                  </div>
-                )}
-              </div>
-
-              {/* Email */}
-              <div className="mb-6">
-                <label className="block text-xs font-semibold text-slate-500 uppercase tracking-wide mb-2">
-                  Email Address
-                </label>
-                <p className="text-slate-700 font-medium">{user.email}</p>
-              </div>
-
-              {/* Codes Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-4 bg-gradient-to-br from-indigo-50 to-indigo-100 rounded-xl border border-indigo-200">
-                  <p className="text-xs text-indigo-600 uppercase font-bold mb-1 tracking-wide">
-                    Referral Code
-                  </p>
-                  <p className="font-mono font-bold text-indigo-900 text-lg">
-                    {user.reff_id}
-                  </p>
-                </div>
-                <div className="p-4 bg-gradient-to-br from-emerald-50 to-emerald-100 rounded-xl border border-emerald-200">
-                  <p className="text-xs text-emerald-600 uppercase font-bold mb-1 tracking-wide">
-                    Placement Code
-                  </p>
-                  <p className="font-mono font-bold text-emerald-900 text-lg">
-                    {user.placement_id}
-                  </p>
-                </div>
-              </div>
-            </div>
+            </label>
           </div>
-
-          {/* Additional Info */}
-          <div className="border-t border-slate-200 pt-6">
-            <h3 className="text-sm font-bold text-slate-700 uppercase tracking-wide mb-4">
-              Account Details
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
-                  Username
-                </p>
-                <p className="text-slate-900 font-semibold">{user.username}</p>
-              </div>
-              {/* Account Status Section */}
-              <div className="p-4 bg-slate-50 rounded-xl">
-                <p className="text-xs text-slate-500 uppercase font-semibold mb-1">
-                  Account Status
-                </p>
-                <p
-                  className={`font-semibold capitalize flex items-center gap-1.5 ${
-                    user.status === "active"
-                      ? "text-emerald-600"
-                      : "text-amber-600"
-                  }`}
-                >
-                  <span
-                    className={`w-2 h-2 rounded-full ${
-                      user.status === "active"
-                        ? "bg-emerald-600"
-                        : "bg-amber-600 animate-pulse"
-                    }`}
-                  ></span>
-                  {user.status || "Pending"}
-                </p>
-              </div>
-            </div>
-          </div>
+          <h2 className="text-2xl font-black text-white mt-4">
+            {user.name || user.username}
+          </h2>
+          <span className="bg-blue-500/20 text-blue-400 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-widest">
+            {user.role || "Member"}
+          </span>
         </div>
+
+        <form onSubmit={handleSubmit} className="p-8 space-y-6">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {/* Name Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2 px-1">
+                <User size={14} /> Full Name
+              </label>
+              <input
+                name="name"
+                value={formData.name}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 rounded-xl border-2 outline-none transition font-semibold ${errors.name ? "border-red-400 bg-red-50" : "border-slate-100 focus:border-slate-900"}`}
+                placeholder="Full Name"
+              />
+              {errors.name && (
+                <p className="text-red-500 text-[10px] font-bold mt-1 px-1 flex items-center gap-1">
+                  <AlertCircle size={10} /> {errors.name[0]}
+                </p>
+              )}
+            </div>
+
+            {/* Email Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2 px-1">
+                <Mail size={14} /> Email Address
+              </label>
+              <input
+                name="email"
+                type="email"
+                value={formData.email}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 rounded-xl border-2 outline-none transition font-semibold ${errors.email ? "border-red-400 bg-red-50" : "border-slate-100 focus:border-slate-900"}`}
+              />
+              {errors.email && (
+                <p className="text-red-500 text-[10px] font-bold mt-1 px-1 flex items-center gap-1">
+                  <AlertCircle size={10} /> {errors.email[0]}
+                </p>
+              )}
+            </div>
+
+            {/* Phone Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-black text-slate-500 uppercase flex items-center gap-2 px-1">
+                <Phone size={14} /> Phone Number
+              </label>
+              <p className="font-mono font-bold text-slate-700 pl-5 ">
+                {user.phone}
+              </p>
+            </div>
+
+            {/* Password Field */}
+            <div className="space-y-1">
+              <label className="text-xs font-black text-blue-600 uppercase flex items-center gap-2 px-1">
+                <Lock size={14} /> Password (Leave blank to keep same)
+              </label>
+              <input
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleInputChange}
+                className={`w-full px-4 py-3 rounded-xl border-2 outline-none transition font-semibold border-blue-50 border-dashed focus:border-blue-600`}
+                placeholder="••••••••"
+              />
+              {errors.password && (
+                <p className="text-red-500 text-[10px] font-bold mt-1 px-1 flex items-center gap-1">
+                  <AlertCircle size={10} /> {errors.password[0]}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* IDs - Read Only */}
+          <div className="grid grid-cols-2 gap-4 pt-2">
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1">
+                <Hash size={10} /> Referral ID
+              </p>
+              <p className="font-mono font-bold text-slate-700">
+                {user.reff_id}
+              </p>
+            </div>
+            <div className="bg-slate-50 p-4 rounded-2xl border border-slate-100 group">
+              <p className="text-[10px] font-black text-slate-400 uppercase tracking-tighter flex items-center gap-1">
+                <Hash size={10} /> Placement ID
+              </p>
+              <p className="font-mono font-bold text-slate-700">
+                {user.placement_id}
+              </p>
+            </div>
+          </div>
+
+          <button
+            type="submit"
+            disabled={loading}
+            className="w-full bg-slate-900 text-white py-4 rounded-2xl font-black uppercase tracking-widest hover:bg-slate-800 disabled:bg-slate-400 disabled:cursor-not-allowed transition shadow-xl flex items-center justify-center gap-2 mt-4"
+          >
+            {loading ? (
+              <div className="flex items-center gap-2">
+                <div className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></div>
+                Updating...
+              </div>
+            ) : (
+              <>
+                <Save size={18} /> Save Changes
+              </>
+            )}
+          </button>
+        </form>
       </div>
     </div>
   );

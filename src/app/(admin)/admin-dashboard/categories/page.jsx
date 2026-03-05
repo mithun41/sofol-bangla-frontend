@@ -2,7 +2,7 @@
 import { useEffect, useState } from "react";
 import { Plus, Trash2, FolderEdit, FolderPlus, Loader2 } from "lucide-react";
 import { getAllCategories, deleteCategory } from "@/services/productService";
-import CategoryModal from "../components/CategoryModal";
+import CategoryModal from "../../components/CategoryModal";
 import toast, { Toaster } from "react-hot-toast";
 import Swal from "sweetalert2"; // SweetAlert2 ইম্পোর্ট করলাম
 

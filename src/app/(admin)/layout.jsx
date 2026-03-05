@@ -3,8 +3,9 @@
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname } from "next/navigation";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
+import { getAllProducts } from "@/services/productService"; // ✅ ইনভেন্টরি চেক করার জন্য
 import {
   LayoutDashboard,
   Users,
@@ -22,40 +23,62 @@ import {
   ExternalLink,
   ChevronLeft,
   ChevronRight,
+  AlertTriangle,
 } from "lucide-react";
-
-/**
- * ✅ Professional Admin Layout
- * - Responsive sidebar (mobile drawer + overlay)
- * - Collapsible sidebar (desktop)
- * - Scrollable navigation with hidden scrollbar
- * - Active route highlighting
- * - Sticky topbar
- * - Dark mode (saved in localStorage)
- * - Logo from public/logo.jpeg (Next Image)
- */
 
 export default function AdminLayout({ children }) {
   const pathname = usePathname();
   const { user, logout } = useAuth();
 
-  const [sidebarOpen, setSidebarOpen] = useState(false); // mobile drawer
-  const [collapsed, setCollapsed] = useState(false); // desktop collapse
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Load theme from localStorage
+  // ✅ Notification States
+  const [lowStockProducts, setLowStockProducts] = useState([]);
+  const [isNotifOpen, setIsNotifOpen] = useState(false);
+  const notifRef = useRef(null);
+
+  // Load theme
   useEffect(() => {
     const saved = localStorage.getItem("admin_theme");
     if (saved === "dark") setDarkMode(true);
   }, []);
 
-  // Persist theme to localStorage + add/remove html class for tailwind dark
   useEffect(() => {
     localStorage.setItem("admin_theme", darkMode ? "dark" : "light");
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // Close mobile drawer on route change
+  // ✅ Fetch Low Stock Data
+  const fetchNotifications = async () => {
+    try {
+      const res = await getAllProducts();
+      const allProducts = Array.isArray(res.data) ? res.data : res.data.results;
+      const lowStock = allProducts.filter((p) => Number(p.stock ?? 0) < 5);
+      setLowStockProducts(lowStock);
+    } catch (err) {
+      console.error("Notif Fetch Error:", err);
+    }
+  };
+
+  useEffect(() => {
+    fetchNotifications();
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000); // ৫ মিনিট পর পর চেক করবে
+    return () => clearInterval(interval);
+  }, []);
+
+  // Close dropdown on outside click
+  useEffect(() => {
+    function handleClickOutside(event) {
+      if (notifRef.current && !notifRef.current.contains(event.target)) {
+        setIsNotifOpen(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
   useEffect(() => {
     setSidebarOpen(false);
   }, [pathname]);
@@ -73,14 +96,30 @@ export default function AdminLayout({ children }) {
   const menuItems = useMemo(
     () => [
       { name: "Dashboard", href: "/admin-dashboard", Icon: LayoutDashboard },
-      { name: "Manage Users", href: "/manage-users", Icon: Users },
-      { name: "Manage Products", href: "/products", Icon: Package },
-      { name: "Manage Orders", href: "/orders", Icon: Package },
-      { name: "Categories", href: "/categories", Icon: Layers },
-      { name: "Binary Tree", href: "/admin-tree", Icon: Network },
-      { name: "Bonus Logs", href: "/bonus-logs", Icon: Wallet },
-      { name: "Withdrawals", href: "/withdrawls", Icon: Wallet },
-      { name: "Settings", href: "/settings", Icon: Settings },
+      {
+        name: "Manage Users",
+        href: "/admin-dashboard/manage-users",
+        Icon: Users,
+      },
+      {
+        name: "Manage Products",
+        href: "/admin-dashboard/products",
+        Icon: Package,
+      },
+      { name: "Manage Orders", href: "/admin-dashboard/orders", Icon: Package },
+      { name: "Categories", href: "/admin-dashboard/categories", Icon: Layers },
+      {
+        name: "Binary Tree",
+        href: "/admin-dashboard/admin-tree",
+        Icon: Network,
+      },
+      { name: "Bonus Logs", href: "/admin-dashboard/bonus-logs", Icon: Wallet },
+      {
+        name: "Withdrawals",
+        href: "/admin-dashboard/withdrawls",
+        Icon: Wallet,
+      },
+      { name: "Settings", href: "/admin-dashboard/settings", Icon: Settings },
     ],
     [],
   );
@@ -92,10 +131,10 @@ export default function AdminLayout({ children }) {
   }, [pathname]);
 
   const isActive = (href) =>
-    pathname === href || (href !== "/" && pathname?.startsWith(href));
+    href === "/admin-dashboard" ? pathname === href : pathname.startsWith(href);
 
   return (
-    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] text-slate-800 dark:text-slate-100">
+    <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] text-slate-800 dark:text-slate-100 font-sans">
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -106,23 +145,11 @@ export default function AdminLayout({ children }) {
 
       {/* Sidebar */}
       <aside
-        className={[
-          "fixed inset-y-0 left-0 z-50",
-          "bg-white dark:bg-[#0f1419]",
-          "border-r border-slate-200 dark:border-slate-800",
-          "transition-all duration-300 ease-out",
-          "flex flex-col",
-          // width
-          collapsed ? "w-20" : "w-72",
-          // mobile slide
-          "md:translate-x-0",
-          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0",
-        ].join(" ")}
+        className={`fixed inset-y-0 left-0 z-50 bg-white dark:bg-[#0f1419] border-r border-slate-200 dark:border-slate-800 transition-all duration-300 flex flex-col ${collapsed ? "w-20" : "w-72"} ${sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"}`}
       >
-        {/* Brand / Logo */}
         <div className="h-20 px-4 flex items-center justify-between border-b border-slate-200 dark:border-slate-800">
-          <Link href="/" className="flex items-center gap-3 group">
-            <div className="relative w-11 h-11 rounded-2xl overflow-hidden bg-slate-100 dark:bg-slate-800 ring-1 ring-slate-200 dark:ring-slate-700 shadow-sm group-hover:shadow-md transition">
+          <Link href="/" className="flex items-center gap-3">
+            <div className="relative w-10 h-10 rounded-xl overflow-hidden bg-slate-100 ring-1 ring-slate-200">
               <Image
                 src="/logo.jpeg"
                 alt="Logo"
@@ -131,37 +158,21 @@ export default function AdminLayout({ children }) {
                 priority
               />
             </div>
-
             {!collapsed && (
-              <div className="leading-tight">
-                <div className="text-sm font-black tracking-tight text-slate-900 dark:text-white">
-                  SOFOL BANGLA
-                </div>
-                <div className="text-[10px] font-bold text-blue-600 flex items-center gap-1">
-                  Visit Home <ExternalLink size={10} />
-                </div>
-              </div>
+              <span className="text-sm font-black tracking-tighter dark:text-white">
+                SOFOL BANGLA
+              </span>
             )}
           </Link>
-
-          {/* Close (mobile) */}
           <button
             onClick={() => setSidebarOpen(false)}
-            className="md:hidden p-2 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-500"
-            aria-label="Close sidebar"
+            className="md:hidden p-2 text-slate-500"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto px-3 py-4 scrollbar-hide">
-          {!collapsed && (
-            <p className="text-[10px] font-black text-slate-400 uppercase tracking-widest px-3 mb-3">
-              Main Menu
-            </p>
-          )}
-
           <div className="space-y-1">
             {menuItems.map(({ name, href, Icon }) => {
               const active = isActive(href);
@@ -169,33 +180,11 @@ export default function AdminLayout({ children }) {
                 <Link
                   key={href}
                   href={href}
-                  className={[
-                    "group flex items-center gap-3 rounded-2xl px-3 py-3 transition-all",
-                    active
-                      ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20"
-                      : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60",
-                    collapsed ? "justify-center" : "",
-                  ].join(" ")}
-                  title={collapsed ? name : undefined}
+                  className={`flex items-center gap-3 rounded-2xl px-3 py-3 transition-all ${active ? "bg-blue-600 text-white shadow-lg shadow-blue-500/20" : "text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800/60"} ${collapsed ? "justify-center" : ""}`}
                 >
-                  <span
-                    className={[
-                      "grid place-items-center",
-                      active
-                        ? "text-white"
-                        : "text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200",
-                    ].join(" ")}
-                  >
-                    <Icon size={20} />
-                  </span>
-
+                  <Icon size={20} />
                   {!collapsed && (
                     <span className="font-bold text-sm">{name}</span>
-                  )}
-
-                  {/* active indicator */}
-                  {active && !collapsed && (
-                    <span className="ml-auto h-2 w-2 rounded-full bg-white/90" />
                   )}
                 </Link>
               );
@@ -205,168 +194,168 @@ export default function AdminLayout({ children }) {
 
         {/* Profile / Logout */}
         <div className="p-3 border-t border-slate-200 dark:border-slate-800">
-          <div className="rounded-2xl bg-slate-50 dark:bg-slate-800/40 p-3">
+          <div className="bg-slate-50 dark:bg-slate-800/40 p-3 rounded-2xl">
             <div
-              className={[
-                "flex items-center",
-                collapsed ? "justify-center" : "gap-3",
-              ].join(" ")}
+              className={`flex items-center ${collapsed ? "justify-center" : "gap-3"}`}
             >
-              {user?.image ? (
-                <img
-                  src={user.image}
-                  alt="Profile"
-                  className="w-11 h-11 rounded-2xl object-cover ring-2 ring-blue-500/20"
-                />
-              ) : (
-                <div className="w-11 h-11 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 grid place-items-center text-white font-black shadow-md">
-                  {getInitials(user?.name)}
-                </div>
-              )}
-
+              <div className="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-600 grid place-items-center text-white font-black text-xs">
+                {getInitials(user?.name)}
+              </div>
               {!collapsed && (
                 <div className="min-w-0">
-                  <div className="text-sm font-black text-slate-900 dark:text-white truncate">
+                  <p className="text-xs font-black truncate">
                     {user?.name || "Admin"}
-                  </div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-slate-500">
-                    {user?.role || "Administrator"}
-                  </div>
+                  </p>
+                  <p className="text-[9px] font-black uppercase text-slate-500">
+                    Administrator
+                  </p>
                 </div>
               )}
             </div>
-
             <button
               onClick={logout}
-              className={[
-                "mt-3 w-full rounded-2xl border text-xs font-black uppercase tracking-wider",
-                "py-2.5 transition-all",
-                "text-red-600 border-red-100 bg-white hover:bg-red-50",
-                "dark:bg-slate-900 dark:border-red-900/30 dark:hover:bg-red-900/10",
-                collapsed ? "px-0" : "px-3",
-                "flex items-center justify-center gap-2",
-              ].join(" ")}
-              title={collapsed ? "Logout" : undefined}
+              className="mt-3 w-full py-2 bg-white dark:bg-slate-900 border border-red-100 dark:border-red-900/30 text-red-600 rounded-xl text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 hover:bg-red-50 transition-all"
             >
-              <LogOut size={14} />
-              {!collapsed && "Logout"}
+              <LogOut size={14} /> {!collapsed && "Logout"}
             </button>
           </div>
         </div>
       </aside>
 
-      {/* Main */}
+      {/* Main Content Area */}
       <div
-        className={[
-          "min-h-screen flex flex-col",
-          collapsed ? "md:ml-20" : "md:ml-72",
-        ].join(" ")}
+        className={`min-h-screen flex flex-col transition-all duration-300 ${collapsed ? "md:ml-20" : "md:ml-72"}`}
       >
         {/* Topbar */}
         <header className="sticky top-0 z-30 h-20 border-b border-slate-200 dark:border-slate-800 bg-white/80 dark:bg-[#0f1419]/80 backdrop-blur-xl">
-          <div className="h-full px-4 sm:px-8 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              {/* Mobile hamburger */}
+          <div className="h-full px-6 flex items-center justify-between">
+            <div className="flex items-center gap-4">
               <button
                 onClick={() => setSidebarOpen(true)}
-                className="md:hidden p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200"
-                aria-label="Open sidebar"
+                className="md:hidden p-2 bg-slate-100 dark:bg-slate-800 rounded-xl"
               >
                 <Menu size={20} />
               </button>
-
-              {/* Desktop collapse toggle */}
               <button
-                onClick={() => setCollapsed((v) => !v)}
-                className="hidden md:flex items-center gap-2 px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-[#0f1419] hover:bg-slate-50 dark:hover:bg-slate-800/40 transition"
-                aria-label="Toggle sidebar"
+                onClick={() => setCollapsed(!collapsed)}
+                className="hidden md:flex p-2 border border-slate-200 dark:border-slate-800 rounded-xl hover:bg-slate-50 transition"
               >
                 {collapsed ? (
                   <ChevronRight size={18} />
                 ) : (
                   <ChevronLeft size={18} />
                 )}
-                <span className="text-xs font-black text-slate-600 dark:text-slate-300">
-                  {collapsed ? "Expand" : "Collapse"}
-                </span>
               </button>
-
               <div className="hidden sm:block">
-                <h2 className="text-lg font-black capitalize text-slate-900 dark:text-white">
+                <h2 className="text-sm font-black uppercase tracking-widest text-slate-400">
                   {pageTitle}
                 </h2>
-                <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                  Admin Panel
-                </p>
               </div>
             </div>
 
             <div className="flex items-center gap-2 sm:gap-4">
-              {/* Theme toggle */}
               <button
-                onClick={() => setDarkMode((v) => !v)}
+                onClick={() => setDarkMode(!darkMode)}
                 className="p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition"
-                aria-label="Toggle theme"
               >
                 {darkMode ? (
                   <Sun size={20} className="text-yellow-500" />
                 ) : (
-                  <Moon
-                    size={20}
-                    className="text-slate-600 dark:text-slate-300"
-                  />
+                  <Moon size={20} className="text-slate-600" />
                 )}
               </button>
 
-              {/* Notifications */}
-              <button
-                className="relative p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition"
-                aria-label="Notifications"
-              >
-                <Bell
-                  size={20}
-                  className="text-slate-600 dark:text-slate-300"
-                />
-                <span className="absolute top-2 right-2 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white dark:ring-[#0f1419]" />
-              </button>
+              {/* ✅ Notification Dropdown System */}
+              <div className="relative" ref={notifRef}>
+                <button
+                  onClick={() => setIsNotifOpen(!isNotifOpen)}
+                  className="relative p-2.5 rounded-2xl hover:bg-slate-100 dark:hover:bg-slate-800/60 transition group"
+                >
+                  <Bell
+                    size={20}
+                    className={
+                      lowStockProducts.length > 0
+                        ? "text-rose-500 animate-pulse"
+                        : "text-slate-600 dark:text-slate-300"
+                    }
+                  />
+                  {lowStockProducts.length > 0 && (
+                    <span className="absolute top-2 right-2 w-4 h-4 bg-rose-600 text-[9px] text-white font-black rounded-full flex items-center justify-center ring-2 ring-white dark:ring-[#0f1419]">
+                      {lowStockProducts.length}
+                    </span>
+                  )}
+                </button>
+
+                {isNotifOpen && (
+                  <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-[#0f1419] border border-slate-200 dark:border-slate-800 shadow-2xl rounded-[2rem] z-50 overflow-hidden ring-4 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
+                    <div className="p-5 border-b dark:border-slate-800 bg-slate-50/50 flex justify-between items-center">
+                      <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
+                        Low Stock Alerts
+                      </h3>
+                      <span className="bg-rose-100 text-rose-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
+                        {lowStockProducts.length}
+                      </span>
+                    </div>
+                    <div className="max-h-[350px] overflow-y-auto scrollbar-hide">
+                      {lowStockProducts.length === 0 ? (
+                        <div className="p-10 text-center text-slate-400 text-sm font-bold">
+                          All products are healthy! ✨
+                        </div>
+                      ) : (
+                        lowStockProducts.map((p) => (
+                          <Link
+                            key={p.id}
+                            href="/admin-dashboard/products"
+                            onClick={() => setIsNotifOpen(false)}
+                            className="p-4 border-b dark:border-slate-800 flex items-center gap-3 hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                          >
+                            <img
+                              src={p.image}
+                              className="w-10 h-10 rounded-xl object-cover bg-slate-100"
+                              alt=""
+                            />
+                            <div className="flex-1 min-w-0 text-left">
+                              <p className="text-xs font-black text-slate-900 dark:text-white truncate">
+                                {p.name}
+                              </p>
+                              <p className="text-[10px] text-rose-500 font-black uppercase mt-1">
+                                Stock: {p.stock} left
+                              </p>
+                            </div>
+                          </Link>
+                        ))
+                      )}
+                    </div>
+                    <Link
+                      href="/admin-dashboard/products"
+                      className="block p-4 text-center text-[10px] font-black uppercase tracking-widest text-blue-600 bg-slate-50 dark:bg-slate-800/30"
+                    >
+                      View All Inventory
+                    </Link>
+                  </div>
+                )}
+              </div>
 
               <div className="h-8 w-px bg-slate-200 dark:bg-slate-800 mx-1 hidden sm:block" />
-
-              {/* User chip */}
               <div className="flex items-center gap-3">
-                <div className="hidden lg:block text-right">
-                  <div className="text-sm font-black text-slate-900 dark:text-white leading-none">
+                <div className="hidden lg:block text-right leading-none">
+                  <p className="text-sm font-black dark:text-white">
                     {user?.name || "Admin"}
-                  </div>
-                  <div className="text-[10px] font-black uppercase tracking-wider text-emerald-500">
-                    Active Now
-                  </div>
+                  </p>
+                  <span className="text-[9px] font-black uppercase text-emerald-500">
+                    Online
+                  </span>
                 </div>
-
-                {user?.image ? (
-                  <img
-                    src={user.image}
-                    alt="Admin"
-                    className="w-10 h-10 rounded-2xl object-cover border border-slate-200 dark:border-slate-800 shadow-sm"
-                  />
-                ) : (
-                  <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-blue-600 to-indigo-600 grid place-items-center text-white font-black text-sm shadow-md">
-                    {getInitials(user?.name)}
-                  </div>
-                )}
+                <div className="w-10 h-10 rounded-xl bg-slate-900 text-white grid place-items-center text-xs font-black">
+                  {getInitials(user?.name)}
+                </div>
               </div>
             </div>
           </div>
         </header>
 
-        {/* Content */}
-        <main className="flex-1 p-4 sm:p-8">{children}</main>
+        <main className="flex-1 p-6 sm:p-10">{children}</main>
       </div>
     </div>
   );
 }
-
-/* ✅ Optional: add this global CSS once (for scrollbar-hide)
-.scrollbar-hide::-webkit-scrollbar { display: none; }
-.scrollbar-hide { -ms-overflow-style: none; scrollbar-width: none; }
-*/

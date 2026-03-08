@@ -18,7 +18,7 @@ export const authService = {
       const { access, refresh, userinfo } = response.data;
 
       if (access) {
-        localStorage.setItem("token", access);
+        localStorage.setItem("access", access);
         localStorage.setItem("refresh_token", refresh);
         // userinfo অবজেক্টটি সেভ করা হচ্ছে যাতে ড্যাশবোর্ডে নাম/ছবি দেখানো যায়
         localStorage.setItem("user", JSON.stringify(userinfo));

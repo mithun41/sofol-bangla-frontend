@@ -12,6 +12,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   Truck,
+  Check,
 } from "lucide-react";
 import Link from "next/link";
 
@@ -32,7 +33,10 @@ export default function CheckoutPage() {
     transactionId: "",
   });
 
-  // ১. ইউজার অথেনটিকেশন চেক
+  // ১. মেম্বারশিপ স্ট্যাটাস চেক
+  const isActiveMember = user?.status === "active";
+
+  // ২. ইউজার অথেনটিকেশন চেক
   useEffect(() => {
     if (!loading) {
       if (!user) {
@@ -41,17 +45,31 @@ export default function CheckoutPage() {
         setFormData((prev) => ({
           ...prev,
           name: user.name || "",
-          phone: user.phone || "", // যদি প্রোফাইলে ফোন থাকে
+          phone: user.phone || "",
         }));
       }
     }
   }, [user, loading, router]);
 
-  // ২. ক্যালকুলেশন
-  const subtotal = cart.reduce(
-    (acc, item) => acc + Number(item.price || 0) * item.quantity,
-    0,
-  );
+  // ৩. ক্যালকুলেশন (শপ পেজের লজিক অনুযায়ী)
+  const subtotal = cart.reduce((acc, item) => {
+    const basePrice = Number(item.price || 0);
+    const pv = Number(item.point_value || 0);
+
+    // মেম্বার হলে (Price - PV*2), নাহলে Regular Price
+    const effectivePrice = isActiveMember
+      ? Math.max(0, basePrice - pv * 2)
+      : basePrice;
+
+    return acc + effectivePrice * item.quantity;
+  }, 0);
+
+  const totalPV = cart.reduce((acc, item) => {
+    // মেম্বাররা ডিসকাউন্ট পেলে PV ০ হয়ে যায়
+    const displayPV = isActiveMember ? 0 : Number(item.point_value || 0);
+    return acc + displayPV * item.quantity;
+  }, 0);
+
   const shipping = formData.city === "Dhaka" ? 100 : 150;
   const total = subtotal + shipping;
 
@@ -59,7 +77,7 @@ export default function CheckoutPage() {
     setFormData({ ...formData, [e.target.name]: e.target.value });
   };
 
-  // ৩. অর্ডার সাবমিট লজিক
+  // ৪. অর্ডার সাবমিট লজিক
   const handleSubmit = async (e) => {
     e.preventDefault();
     setOrderLoading(true);
@@ -69,12 +87,22 @@ export default function CheckoutPage() {
       phone: formData.phone,
       address: formData.address,
       city: formData.city,
-      items: cart.map((i) => ({
-        product_id: i.id,
-        quantity: i.quantity,
-        price: i.price,
-        point_value: i.point_value || 0,
-      })),
+      items: cart.map((i) => {
+        const basePrice = Number(i.price || 0);
+        const pv = Number(i.point_value || 0);
+        // ডাটাবেজেও ডিসকাউন্টেড প্রাইস এবং PV পাঠাতে হবে
+        const finalPrice = isActiveMember
+          ? Math.max(0, basePrice - pv * 2)
+          : basePrice;
+        const finalPV = isActiveMember ? 0 : pv;
+
+        return {
+          product_id: i.id,
+          quantity: i.quantity,
+          price: finalPrice,
+          point_value: finalPV,
+        };
+      }),
       subtotal: subtotal,
       shipping_cost: shipping,
       total_amount: total,
@@ -85,7 +113,7 @@ export default function CheckoutPage() {
 
     try {
       const response = await fetch(
-        " https://mithun41.pythonanywhere.com/api/orders/place-order/",
+        "https://mithun41.pythonanywhere.com/api/orders/place-order/",
         {
           method: "POST",
           headers: {
@@ -105,9 +133,7 @@ export default function CheckoutPage() {
         alert(res.error || "Order failed! Please check your information.");
       }
     } catch (error) {
-      alert(
-        "Server connection error! Please check if your backend is running.",
-      );
+      alert("Server connection error!");
     } finally {
       setOrderLoading(false);
     }
@@ -159,7 +185,6 @@ export default function CheckoutPage() {
         >
           {/* Left Column: Forms */}
           <div className="lg:col-span-7 space-y-6">
-            {/* Shipping Info */}
             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
@@ -178,7 +203,7 @@ export default function CheckoutPage() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="input-field w-full px-4 py-3 rounded-xl border bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 rounded-xl border bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="space-y-2">
@@ -191,7 +216,7 @@ export default function CheckoutPage() {
                     value={formData.phone}
                     onChange={handleInputChange}
                     placeholder="017XXXXXXXX"
-                    className="input-field w-full px-4 py-3 rounded-xl border bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
+                    className="w-full px-4 py-3 rounded-xl border bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"
                   />
                 </div>
                 <div className="space-y-2 md:col-span-2">
@@ -225,7 +250,6 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* Payment Info */}
             <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-slate-100">
               <div className="flex items-center gap-3 mb-6">
                 <div className="p-2 bg-blue-50 rounded-lg text-blue-600">
@@ -240,7 +264,11 @@ export default function CheckoutPage() {
                     type="button"
                     key={method}
                     onClick={() => setPaymentMethod(method)}
-                    className={`relative p-4 border-2 rounded-2xl text-center transition-all ${paymentMethod === method ? "border-blue-500 bg-blue-50" : "border-slate-100"}`}
+                    className={`relative p-4 border-2 rounded-2xl text-center transition-all ${
+                      paymentMethod === method
+                        ? "border-blue-500 bg-blue-50"
+                        : "border-slate-100"
+                    }`}
                   >
                     <span className="text-sm font-black uppercase">
                       {method === "cod" ? "Cash on Delivery" : method}
@@ -256,7 +284,7 @@ export default function CheckoutPage() {
               </div>
 
               {paymentMethod !== "cod" && (
-                <div className="p-6 bg-slate-900 rounded-2xl text-white space-y-4 animate-in fade-in slide-in-from-top-2">
+                <div className="p-6 bg-slate-900 rounded-2xl text-white space-y-4">
                   <p className="text-sm opacity-80">
                     Send Money to (Personal):{" "}
                     <span className="font-bold text-blue-400">
@@ -277,7 +305,7 @@ export default function CheckoutPage() {
                       name="transactionId"
                       value={formData.transactionId}
                       onChange={handleInputChange}
-                      placeholder="Transaction ID (TrxID)"
+                      placeholder="Transaction ID"
                       className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 outline-none"
                     />
                   </div>
@@ -286,48 +314,76 @@ export default function CheckoutPage() {
             </div>
           </div>
 
-          {/* Right Column: Summary */}
+          {/* Right Column: Order Summary */}
           <div className="lg:col-span-5">
-            <div className="bg-white p-8 rounded-3xl shadow-xl shadow-slate-200/50 border border-slate-100 sticky top-24">
+            <div className="bg-white p-8 rounded-3xl shadow-xl border border-slate-100 sticky top-24">
               <h3 className="text-lg font-black mb-6">Order Summary</h3>
               <div className="space-y-4 mb-6 max-h-[300px] overflow-y-auto pr-2">
-                {cart.map((item) => (
-                  <div
-                    key={item.id}
-                    className="flex items-center gap-4 justify-between"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={item.image}
-                        className="h-12 w-12 rounded-lg object-cover border"
-                        alt=""
-                      />
-                      <div>
-                        <p className="text-sm font-bold line-clamp-1">
-                          {item.name}
+                {cart.map((item) => {
+                  const basePrice = Number(item.price || 0);
+                  const pv = Number(item.point_value || 0);
+                  // শপ পেজ লজিক
+                  const finalPrice = isActiveMember
+                    ? Math.max(0, basePrice - pv * 2)
+                    : basePrice;
+
+                  return (
+                    <div
+                      key={item.id}
+                      className="flex items-center gap-4 justify-between"
+                    >
+                      <div className="flex items-center gap-3">
+                        <img
+                          src={item.image}
+                          className="h-12 w-12 rounded-lg object-cover border"
+                          alt=""
+                        />
+                        <div>
+                          <p className="text-sm font-bold line-clamp-1">
+                            {item.name}
+                          </p>
+                          <p className="text-[10px] text-slate-400">
+                            Qty: {item.quantity} × ৳{finalPrice}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="text-right">
+                        <p className="text-sm font-black">
+                          ৳{finalPrice * item.quantity}
                         </p>
-                        <p className="text-xs text-slate-400">
-                          Qty: {item.quantity}
-                        </p>
+                        {isActiveMember && pv > 0 && (
+                          <p className="text-[8px] text-orange-500 font-bold">
+                            MEMBERSHIP APPLIED
+                          </p>
+                        )}
                       </div>
                     </div>
-                    <p className="text-sm font-black">
-                      ৳{item.price * item.quantity}
-                    </p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
 
               <div className="space-y-3 border-t pt-6 mb-6">
-                <div className="flex justify-between text-slate-500 italic">
-                  <span>Total Points (PV)</span>
-                  <span className="text-emerald-600 font-bold">
-                    {cart.reduce(
-                      (acc, i) => acc + i.point_value * i.quantity,
-                      0,
-                    )}
+                <div className="flex justify-between items-center text-slate-500">
+                  <span className="text-sm font-medium">Total Points (PV)</span>
+                  <span className="text-emerald-600 font-bold bg-emerald-50 px-2 py-0.5 rounded">
+                    {totalPV}
                   </span>
                 </div>
+
+                {isActiveMember && (
+                  <div className="bg-blue-50 p-3 rounded-xl border border-blue-100 flex gap-2 items-start mb-2">
+                    <Check
+                      className="text-blue-600 mt-0.5"
+                      size={14}
+                      strokeWidth={3}
+                    />
+                    <p className="text-[10px] text-blue-700 font-bold leading-tight">
+                      মেম্বার হিসেবে আপনি ক্যাশ ডিসকাউন্ট পাচ্ছেন। এজন্য এই
+                      অর্ডারে কোনো PV যোগ হবে না।
+                    </p>
+                  </div>
+                )}
+
                 <div className="flex justify-between text-slate-500 font-medium">
                   <span>Subtotal</span>
                   <span>৳{subtotal}</span>
@@ -347,7 +403,7 @@ export default function CheckoutPage() {
               <button
                 type="submit"
                 disabled={orderLoading}
-                className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70 shadow-lg shadow-blue-200"
+                className="w-full bg-blue-600 text-white py-5 rounded-2xl font-black text-lg hover:bg-blue-700 transition-all flex items-center justify-center gap-3 disabled:opacity-70"
               >
                 {orderLoading ? (
                   <Loader2 className="animate-spin" />

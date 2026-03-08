@@ -33,7 +33,9 @@ export default function Navbar() {
     { name: "Shop", href: "/shop", icon: <ShoppingBag size={18} /> },
     { name: "About", href: "/about" },
   ];
-
+  useEffect(() => {
+    setIsMobileMenuOpen(false);
+  }, [pathname]);
   useEffect(() => {
     const handleClick = (e) => {
       if (dropdownRef.current && !dropdownRef.current.contains(e.target))

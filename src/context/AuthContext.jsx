@@ -62,7 +62,7 @@ export const AuthProvider = ({ children }) => {
       if (role === "admin") {
         router.push("/admin-dashboard");
       } else {
-        router.push("/dashboard");
+        router.push("/");
       }
       return { success: true };
     } catch (err) {

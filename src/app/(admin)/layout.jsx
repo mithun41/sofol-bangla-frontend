@@ -5,7 +5,8 @@ import Image from "next/image";
 import { usePathname } from "next/navigation";
 import { useEffect, useMemo, useState, useRef } from "react";
 import { useAuth } from "@/context/AuthContext";
-import { getAllProducts } from "@/services/productService"; // ✅ ইনভেন্টরি চেক করার জন্য
+import { getAllProducts } from "@/services/productService";
+import { toast, Toaster } from "react-hot-toast"; // ✅ Toaster ইম্পোর্ট
 import {
   LayoutDashboard,
   Users,
@@ -20,10 +21,9 @@ import {
   Wallet,
   Package,
   Layers,
-  ExternalLink,
+  ShoppingCart, // ✅ POS এর জন্য আইকন
   ChevronLeft,
   ChevronRight,
-  AlertTriangle,
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -34,7 +34,7 @@ export default function AdminLayout({ children }) {
   const [collapsed, setCollapsed] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  // ✅ Notification States
+  // Notification States
   const [lowStockProducts, setLowStockProducts] = useState([]);
   const [isNotifOpen, setIsNotifOpen] = useState(false);
   const notifRef = useRef(null);
@@ -50,7 +50,7 @@ export default function AdminLayout({ children }) {
     document.documentElement.classList.toggle("dark", darkMode);
   }, [darkMode]);
 
-  // ✅ Fetch Low Stock Data
+  // Fetch Low Stock Data
   const fetchNotifications = async () => {
     try {
       const res = await getAllProducts();
@@ -64,7 +64,7 @@ export default function AdminLayout({ children }) {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 5 * 60 * 1000); // ৫ মিনিট পর পর চেক করবে
+    const interval = setInterval(fetchNotifications, 5 * 60 * 1000);
     return () => clearInterval(interval);
   }, []);
 
@@ -96,6 +96,7 @@ export default function AdminLayout({ children }) {
   const menuItems = useMemo(
     () => [
       { name: "Dashboard", href: "/admin-dashboard", Icon: LayoutDashboard },
+      { name: "POS (Sales)", href: "/admin-dashboard/pos", Icon: ShoppingCart }, // ✅ POS লিঙ্ক অ্যাড করা হয়েছে
       {
         name: "Manage Users",
         href: "/admin-dashboard/manage-users",
@@ -135,6 +136,20 @@ export default function AdminLayout({ children }) {
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#0a0e1a] text-slate-800 dark:text-slate-100 font-sans">
+      {/* ✅ Global Toaster: এখন থেকে সব পেজে টোস্ট কাজ করবে */}
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          style: {
+            background: darkMode ? "#1e293b" : "#fff",
+            color: darkMode ? "#fff" : "#1e293b",
+            borderRadius: "12px",
+            fontSize: "14px",
+            fontWeight: "bold",
+          },
+        }}
+      />
+
       {/* Mobile overlay */}
       {sidebarOpen && (
         <div
@@ -159,8 +174,8 @@ export default function AdminLayout({ children }) {
               />
             </div>
             {!collapsed && (
-              <span className="text-sm font-black tracking-tighter dark:text-white">
-                SOFOL BANGLA
+              <span className="text-sm font-black tracking-tighter dark:text-white uppercase">
+                Sofol Bangla
               </span>
             )}
           </Link>
@@ -265,7 +280,7 @@ export default function AdminLayout({ children }) {
                 )}
               </button>
 
-              {/* ✅ Notification Dropdown System */}
+              {/* Notification System */}
               <div className="relative" ref={notifRef}>
                 <button
                   onClick={() => setIsNotifOpen(!isNotifOpen)}
@@ -290,7 +305,7 @@ export default function AdminLayout({ children }) {
                   <div className="absolute right-0 mt-3 w-80 bg-white dark:bg-[#0f1419] border border-slate-200 dark:border-slate-800 shadow-2xl rounded-[2rem] z-50 overflow-hidden ring-4 ring-black/5 animate-in fade-in slide-in-from-top-2 duration-200">
                     <div className="p-5 border-b dark:border-slate-800 bg-slate-50/50 flex justify-between items-center">
                       <h3 className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                        Low Stock Alerts
+                        Inventory Alerts
                       </h3>
                       <span className="bg-rose-100 text-rose-600 text-[9px] px-2 py-0.5 rounded-full font-black uppercase">
                         {lowStockProducts.length}

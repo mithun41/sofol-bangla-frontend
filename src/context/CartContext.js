@@ -100,8 +100,9 @@ export const CartProvider = ({ children }) => {
   };
 
   // ৫. কার্টে আইটেম যোগ করা
-  const addToCart = async (product) => {
+  const addToCart = async (product, quantity = 1) => {
     const token = getAuthToken();
+
     if (token) {
       try {
         await fetch("https://mithun41.pythonanywhere.com/api/products/cart/", {
@@ -110,8 +111,12 @@ export const CartProvider = ({ children }) => {
             "Content-Type": "application/json",
             Authorization: `Bearer ${token}`,
           },
-          body: JSON.stringify({ product: product.id, quantity: 1 }),
+          body: JSON.stringify({
+            product: product.id,
+            quantity: quantity,
+          }),
         });
+
         fetchDatabaseCart(token);
       } catch (err) {
         console.error(err);
@@ -119,24 +124,32 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart((prev) => {
         const existing = prev.find((i) => i.id === product.id);
+
         let newCart;
+
         if (existing) {
           newCart = prev.map((i) =>
             i.id === product.id
               ? {
                   ...i,
-                  quantity: i.quantity + 1,
-                  item_subtotal: (i.quantity + 1) * i.price,
+                  quantity: i.quantity + quantity,
+                  item_subtotal: (i.quantity + quantity) * i.price,
                 }
               : i,
           );
         } else {
           newCart = [
             ...prev,
-            { ...product, quantity: 1, item_subtotal: product.price },
+            {
+              ...product,
+              quantity: quantity,
+              item_subtotal: product.price * quantity,
+            },
           ];
         }
+
         localStorage.setItem("cart", JSON.stringify(newCart));
+
         return newCart;
       });
     }

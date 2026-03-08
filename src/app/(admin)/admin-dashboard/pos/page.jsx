@@ -2,26 +2,26 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { toast } from "react-hot-toast";
+import { toast, Toaster } from "react-hot-toast"; // Toaster অ্যাড করলাম
 import api from "@/services/api";
+import { useReactToPrint } from "react-to-print"; // ইম্পোর্ট নিশ্চিত কর
+
 import CustomerSearch from "../../components/pos/CustomerSearch";
 import ProductScanner from "../../components/pos/ProductScanner";
 import CartTable from "../../components/pos/CartTable";
 import OrderSummary from "../../components/pos/OrderSummary";
-import QuickRegister from "../../components/pos/QuickRegister"; // কম্পোনেন্টটি ইম্পোর্ট কর
+import QuickRegister from "../../components/pos/QuickRegister";
+import ThermalInvoice from "../../components/pos/ThermalInvoice";
 
-// কারেন্সি ফরম্যাটার
 const formatBDT = (value) => {
   const n = Number(value || 0);
   return `৳${n.toFixed(2).replace(/\.00$/, "")}`;
 };
 
 export default function POSPage() {
-  // ১. কার্ট কন্টেক্সট থেকে মেথডগুলো আনা
   const { cart, addToCart, updateQuantity, removeFromCart, clearCart } =
     useCart();
 
-  // ২. স্টেটস (States)
   const [barcode, setBarcode] = useState("");
   const [scanLoading, setScanLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
@@ -34,27 +34,33 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // প্রিন্ট স্টেট
+  const [lastOrder, setLastOrder] = useState(null);
+  const [printCart, setPrintCart] = useState([]);
+  const invoiceRef = useRef();
+
   const barcodeRef = useRef(null);
   const beepRef = useRef(null);
 
-  // --- ৩. ডাইনামিক প্রাইস লজিক (১ পয়েন্ট = ২ টাকা ডিসকাউন্ট) ---
+  // প্রিন্ট কনফিগারেশন
+  const handlePrint = useReactToPrint({
+    contentRef: invoiceRef, // latest version অনুযায়ী contentRef ব্যবহার করা ভালো
+  });
+
   const getEffectivePrice = (item) => {
     const basePrice = parseFloat(item.price || 0);
     const pv = parseFloat(item.point_value || 0);
-    // যদি কাস্টমার সিলেক্ট থাকে এবং স্ট্যাটাস Active হয়
     const isMemberActive = selectedCustomer?.status?.toLowerCase() === "active";
-
     return isMemberActive ? basePrice - pv * 2 : basePrice;
   };
 
-  // --- ৪. রিয়েল-টাইম সাবটোটাল ক্যালকুলেশন ---
   const dynamicSubtotal = useMemo(() => {
-    return cart.reduce((acc, item) => {
-      return acc + getEffectivePrice(item) * item.quantity;
-    }, 0);
+    return cart.reduce(
+      (acc, item) => acc + getEffectivePrice(item) * item.quantity,
+      0,
+    );
   }, [cart, selectedCustomer]);
 
-  // --- ৫. কাস্টমার সার্চ লজিক (Debounced) ---
   useEffect(() => {
     if (customerSearch.length < 2) {
       setCustomers([]);
@@ -67,13 +73,12 @@ export default function POSPage() {
         );
         setCustomers(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Customer Search Error", err);
+        console.error(err);
       }
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
-  // --- ৬. প্রোডাক্ট সার্চ লজিক (Debounced) ---
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 2) {
@@ -90,7 +95,7 @@ export default function POSPage() {
         );
         setSearchResults(Array.isArray(res.data) ? res.data : []);
       } catch (err) {
-        console.error("Product Search Error", err);
+        console.error(err);
       } finally {
         setSearchLoading(false);
       }
@@ -98,7 +103,6 @@ export default function POSPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // --- ৭. বারকোড স্ক্যান হ্যান্ডলার ---
   const handleScan = async (e) => {
     e.preventDefault();
     const code = barcode.trim();
@@ -117,24 +121,19 @@ export default function POSPage() {
     }
   };
 
-  // --- ৮. রেজিস্ট্রেশন পরবর্তী অটো-সিলেক্ট লজিক ---
   const handleQuickRegisterSuccess = (newCustomer) => {
-    // API থেকে আসা ইউজার অবজেক্ট সরাসরি সিলেক্ট করছি
     setSelectedCustomer(newCustomer);
     setCustomerSearch("");
     toast.success(`${newCustomer.username} এখন সিলেক্টেড!`);
   };
 
-  // --- ৯. ফাইনাল চেকআউট (Order Creation) ---
   const handleCheckout = async () => {
     if (cart.length === 0) {
       toast.error("কার্টে কোনো প্রোডাক্ট নেই!");
       return;
     }
     if (!selectedCustomer) {
-      toast.error(
-        "দয়া করে একজন কাস্টমার সিলেক্ট করুন অথবা নতুন রেজিস্টার করুন!",
-      );
+      toast.error("দয়া করে একজন কাস্টমার সিলেক্ট করুন!");
       return;
     }
 
@@ -146,16 +145,26 @@ export default function POSPage() {
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
+        price: getEffectivePrice(item), // ডিসকাউন্টেড প্রাইস পাঠানো
       })),
     };
 
     setIsSubmitting(true);
     try {
-      await api.post("pos/order/create/", orderData);
+      const res = await api.post("pos/order/create/", orderData);
+
+      // প্রিন্টের জন্য ডাটা সেট করা
+      setLastOrder(res.data);
+      setPrintCart([...cart]); // কার্ট ক্লিয়ার হওয়ার আগে ডাটা কপি করে রাখা
+
       toast.success("বিক্রি সফল হয়েছে!");
-      clearCart();
-      setSelectedCustomer(null);
-      setCustomerSearch("");
+
+      // একটু সময় দিয়ে প্রিন্ট ডায়ালগ ওপেন করা
+      setTimeout(() => {
+        handlePrint();
+        clearCart();
+        setSelectedCustomer(null);
+      }, 500);
     } catch (err) {
       toast.error(
         err.response?.data?.error || "অর্ডার সম্পন্ন করতে সমস্যা হয়েছে!",
@@ -165,7 +174,6 @@ export default function POSPage() {
     }
   };
 
-  // --- ১০. সাউন্ড এবং ফোকাস ইফেক্ট ---
   useEffect(() => {
     beepRef.current = new Audio(
       "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3",
@@ -175,11 +183,10 @@ export default function POSPage() {
 
   const playBeep = () => beepRef.current?.play().catch(() => {});
 
-  // --- ১১. UI রেন্ডারিং ---
   return (
     <div className="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans text-slate-900">
+      <Toaster position="top-right" /> {/* ✅ টোস্ট কাজ না করলে এটা মাস্ট */}
       <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-8">
-        {/* বাম পাশ: কাস্টমার, স্ক্যানার এবং টেবিল */}
         <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CustomerSearch
@@ -189,7 +196,6 @@ export default function POSPage() {
               setCustomerSearch={setCustomerSearch}
               customers={customers}
             />
-
             <ProductScanner
               barcode={barcode}
               setBarcode={setBarcode}
@@ -207,7 +213,6 @@ export default function POSPage() {
             />
           </div>
 
-          {/* ✅ Quick Register Section: কাস্টমার সিলেক্ট না থাকলে এটা দেখাবে */}
           {!selectedCustomer && (
             <QuickRegister onRegisterSuccess={handleQuickRegisterSuccess} />
           )}
@@ -223,7 +228,6 @@ export default function POSPage() {
           />
         </div>
 
-        {/* ডান পাশ: অর্ডার সামারি এবং পেমেন্ট */}
         <div className="col-span-12 lg:col-span-4">
           <OrderSummary
             selectedCustomer={selectedCustomer}
@@ -234,6 +238,18 @@ export default function POSPage() {
             cartLength={cart.length}
           />
         </div>
+      </div>
+      {/* ✅ হিডেন ইনভয়েস কম্পোনেন্ট */}
+      <div className="hidden">
+        <ThermalInvoice
+          ref={invoiceRef}
+          orderData={lastOrder}
+          cart={printCart}
+          customer={selectedCustomer}
+          subtotal={dynamicSubtotal}
+          formatBDT={formatBDT}
+          getEffectivePrice={getEffectivePrice}
+        />
       </div>
     </div>
   );

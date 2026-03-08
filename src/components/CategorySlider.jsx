@@ -17,7 +17,6 @@ export default function CategorySlider() {
     const fetchCats = async () => {
       try {
         const res = await getAllCategories();
-        // API থেকে ডেটা যেভাবে আসে সে অনুযায়ী সেট করুন
         setCategories(
           Array.isArray(res.data) ? res.data : res.data.results || [],
         );
@@ -33,7 +32,7 @@ export default function CategorySlider() {
   if (loading)
     return (
       <div className="flex justify-center py-10">
-        <Loader2 className="animate-spin text-emerald-500" size={30} />
+        <Loader2 className="animate-spin text-[#FF620A]" size={30} />
       </div>
     );
 
@@ -42,16 +41,19 @@ export default function CategorySlider() {
       {/* Header */}
       <div className="flex items-center justify-between mb-8">
         <div>
-          <h2 className="text-xl md:text-2xl font-black text-slate-800 tracking-tight uppercase">
+          <h2 className="text-xl md:text-2xl font-bold text-slate-800 tracking-tight uppercase">
             Shop By Category
           </h2>
-          <div className="h-1 w-12 bg-emerald-500 rounded-full mt-1"></div>
+
+          {/* Primary Accent Line */}
+          <div className="h-1 w-12 bg-[#FF620A] rounded-full mt-1"></div>
         </div>
+
         <Link
           href="/shop"
-          className="group flex items-center gap-1 text-sm font-bold text-emerald-600 hover:text-emerald-700 transition-colors"
+          className="group flex items-center gap-1 text-sm font-semibold text-[#007A55] hover:text-[#FF620A] transition-colors"
         >
-          View All{" "}
+          View All
           <ChevronRight
             size={18}
             className="group-hover:translate-x-1 transition-transform"
@@ -63,12 +65,12 @@ export default function CategorySlider() {
       <Swiper
         modules={[Autoplay, Navigation]}
         spaceBetween={15}
-        slidesPerView={3.2} // মোবাইলে ৩টা পুরোপুরি আর ১টা আধা দেখা যাবে (ইঙ্গিত দেয় স্ক্রল করার)
+        slidesPerView={3.2}
         autoplay={{ delay: 3500, disableOnInteraction: false }}
         breakpoints={{
           640: { slidesPerView: 4 },
           768: { slidesPerView: 5 },
-          1024: { slidesPerView: 7 }, // ডেক্সটপে ৭টা ক্যাটাগরি
+          1024: { slidesPerView: 7 },
         }}
         className="category-swiper"
       >
@@ -78,8 +80,8 @@ export default function CategorySlider() {
               href={`/shop?category=${cat.id}`}
               className="group flex flex-col items-center gap-3 text-center"
             >
-              {/* Circular Image Wrap */}
-              <div className="relative w-20 h-20 md:w-32 md:h-32 rounded-full p-1 bg-white border border-slate-100 shadow-sm group-hover:shadow-md group-hover:border-emerald-500 transition-all duration-300">
+              {/* Circular Image */}
+              <div className="relative w-20 h-20 md:w-32 md:h-32 rounded-full p-1 bg-white border border-slate-100 shadow-sm group-hover:shadow-md group-hover:border-[#FF620A] transition-all duration-300">
                 <div className="w-full h-full rounded-full overflow-hidden bg-slate-50 flex items-center justify-center">
                   {cat.image ? (
                     <img
@@ -94,7 +96,7 @@ export default function CategorySlider() {
               </div>
 
               {/* Category Name */}
-              <h3 className="text-[11px] md:text-sm font-black text-slate-700 group-hover:text-emerald-600 transition-colors uppercase tracking-tight truncate w-full px-1">
+              <h3 className="text-[11px] md:text-sm font-semibold text-slate-700 group-hover:text-[#FF620A] transition-colors uppercase tracking-tight truncate w-full px-1">
                 {cat.name}
               </h3>
             </Link>

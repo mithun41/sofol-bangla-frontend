@@ -1,39 +1,65 @@
-import { Star } from "lucide-react";
+import { Trophy, TrendingUp, Star } from "lucide-react";
+import Link from "next/link";
 
 export default function BonusPromo() {
   const levels = [
-    { star: "4 Star", cash: "5,000" },
-    { star: "6 Star", cash: "30,000" },
-    { star: "8 Star", cash: "1,00,000" },
+    { star: "4 Star", reward: "৳5,000" },
+    { star: "6 Star", reward: "৳30,000" },
+    { star: "8 Star", reward: "৳1,00,000" },
   ];
 
   return (
-    <section className="px-6 mb-20">
-      <div className="max-w-7xl mx-auto bg-blue-600 rounded-[3rem] p-8 md:p-16 text-white flex flex-col md:flex-row items-center justify-between gap-12 overflow-hidden relative">
-        <Star className="absolute -bottom-10 -left-10 text-white/5 w-64 h-64" />
-        <div className="relative z-10 max-w-xl text-center md:text-left">
-          <h2 className="text-4xl md:text-5xl font-black mb-6 leading-tight">
-            Achieve Ranks & <br /> Get Paid Big!
-          </h2>
+    <section className="px-6 mb-24">
+      <div className="max-w-7xl mx-auto rounded-[40px] bg-gradient-to-r from-[#FF620A] to-[#ff7e35] p-10 md:p-16 text-white relative overflow-hidden">
+        {/* Background Glow */}
+        <div className="absolute -top-20 -right-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+        <div className="absolute -bottom-20 -left-20 w-96 h-96 bg-white/10 rounded-full blur-3xl"></div>
+
+        <div className="grid md:grid-cols-2 gap-12 items-center relative z-10">
+          {/* LEFT CONTENT */}
+          <div>
+            <div className="flex items-center gap-2 mb-4">
+              <Trophy className="text-yellow-300" size={22} />
+              <span className="uppercase font-bold text-sm tracking-wider">
+                Rank Rewards
+              </span>
+            </div>
+
+            <h2 className="text-4xl md:text-5xl font-black leading-tight mb-6">
+              Level Up Your <br /> Income Potential
+            </h2>
+
+            <p className="text-white/90 max-w-md mb-8 text-sm md:text-base">
+              Grow your network, unlock new star levels, and earn powerful
+              performance bonuses. The higher you rise, the bigger the rewards.
+            </p>
+
+            <Link
+              href="/plan"
+              className="inline-flex items-center gap-2 bg-white text-[#FF620A] px-6 py-3 rounded-xl font-bold text-sm hover:bg-slate-100 transition"
+            >
+              View Business Plan
+              <TrendingUp size={16} />
+            </Link>
+          </div>
+
+          {/* RIGHT REWARD CARDS */}
           <div className="grid grid-cols-3 gap-4">
-            {levels.map((l, i) => (
+            {levels.map((lvl, i) => (
               <div
                 key={i}
-                className="bg-white/10 backdrop-blur-md p-4 rounded-2xl border border-white/10"
+                className="bg-white/10 backdrop-blur-lg border border-white/20 rounded-2xl p-5 text-center hover:bg-white/20 transition"
               >
-                <p className="text-[10px] font-bold text-blue-200 uppercase">
-                  {l.star}
+                <Star className="mx-auto mb-2 text-yellow-300" size={20} />
+                <p className="text-xs font-bold uppercase tracking-wider text-white/80">
+                  {lvl.star}
                 </p>
-                <p className="text-xl font-black italic">৳{l.cash}</p>
+                <p className="text-xl md:text-2xl font-black mt-1">
+                  {lvl.reward}
+                </p>
               </div>
             ))}
           </div>
-        </div>
-        <div className="bg-amber-400 text-slate-900 w-32 h-32 md:w-44 md:h-44 rounded-full flex flex-col items-center justify-center rotate-12 shadow-2xl">
-          <span className="text-xs font-black uppercase tracking-widest">
-            Bonus
-          </span>
-          <span className="text-3xl md:text-5xl font-black">WIN</span>
         </div>
       </div>
     </section>

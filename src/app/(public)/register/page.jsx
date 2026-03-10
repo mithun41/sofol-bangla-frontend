@@ -3,13 +3,14 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { authService } from "@/services/authService";
 import { useAuth } from "@/context/AuthContext";
-import Swal from "sweetalert2"; // ✅ SweetAlert2 ইম্পোর্ট
+import Swal from "sweetalert2";
 
 export default function RegisterPage() {
   const router = useRouter();
   const { login } = useAuth();
 
   const [formData, setFormData] = useState({
+    name: "",
     username: "",
     password: "",
     email: "",
@@ -37,6 +38,7 @@ export default function RegisterPage() {
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+
     if (errors[name]) {
       setErrors((prev) => {
         const newErrors = { ...prev };
@@ -67,10 +69,7 @@ export default function RegisterPage() {
         password: formData.password,
       });
 
-      if (result.success) {
-      } else {
-        router.push("/login");
-      }
+      if (!result.success) router.push("/login");
     } catch (err) {
       if (err && typeof err === "object") {
         setErrors(err);
@@ -81,42 +80,51 @@ export default function RegisterPage() {
       setLoading(false);
     }
   };
-  console.log(errors.username?.[0]);
-  console.log(errors.phone?.[0]);
-  console.log(errors.password?.[0]);
-  console.log(errors.placement_id?.[0]);
-  console.log(errors.reff_id?.[0]);
+
   const renderError = (field) => {
     if (!errors[field]) return null;
     const message = Array.isArray(errors[field])
       ? errors[field][0]
       : errors[field];
+
     return (
-      <p className="text-red-500 text-[11px] mt-1 ml-1 font-medium italic">
+      <p className="text-red-500 text-xs mt-1 ml-1 font-medium italic">
         {message}
       </p>
     );
   };
 
+  const inputStyle =
+    "appearance-none rounded-xl block w-full px-4 py-3 border border-slate-200 placeholder-slate-400 text-slate-800 focus:outline-none focus:ring-2 focus:ring-[#FF620A]/30 focus:border-[#FF620A] transition text-sm";
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8 font-sans">
-      <div className="max-w-md w-full space-y-8 bg-white p-10 rounded-xl shadow-xl border border-gray-100">
+    <div className="min-h-screen flex items-center justify-center bg-slate-50 py-12 px-4">
+      <div className="max-w-md w-full bg-white p-8 md:p-10 rounded-2xl shadow-lg border border-slate-100 space-y-6">
+        {/* Header */}
         <div className="text-center">
-          <h2 className="text-3xl font-black text-slate-900 tracking-tight">
-            Create Account
-          </h2>
-          <p className="mt-2 text-sm text-slate-500 font-medium italic">
-            Join Sofol Bangla Network
+          <h2 className="text-3xl font-black text-slate-900">Create Account</h2>
+
+          <p className="mt-2 text-sm text-slate-500">
+            Join{" "}
+            <span className="text-[#007A55] font-semibold">Sofol Bangla</span>{" "}
+            Network
           </p>
         </div>
 
-        {errors.non_field_errors || errors.general ? (
-          <div className="bg-red-50 border border-red-100 text-red-600 p-3 rounded-lg text-center text-xs font-bold">
-            {errors.non_field_errors?.[0] || errors.general}
+        <form className="space-y-4" onSubmit={handleSubmit}>
+          {/* Full Name */}
+          <div>
+            <input
+              name="name"
+              type="text"
+              value={formData.name}
+              onChange={handleChange}
+              className={`${inputStyle} ${errors.name ? "border-red-500 bg-red-50" : ""}`}
+              placeholder="Full Name"
+            />
+            {renderError("name")}
           </div>
-        ) : null}
 
-        <form className="mt-8 space-y-4" onSubmit={handleSubmit}>
           {/* Username */}
           <div>
             <input
@@ -124,26 +132,26 @@ export default function RegisterPage() {
               type="text"
               value={formData.username}
               onChange={handleChange}
-              className={`appearance-none rounded-xl block w-full px-4 py-3 border ${errors.username ? "border-red-500 bg-red-50" : "border-slate-200"} placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm`}
+              className={`${inputStyle} ${errors.username ? "border-red-500 bg-red-50" : ""}`}
               placeholder="Username"
             />
             {renderError("username")}
           </div>
 
-          {/* Email (Optional - removed 'required') */}
+          {/* Email */}
           <div>
             <input
               name="email"
               type="email"
               value={formData.email}
               onChange={handleChange}
-              className={`appearance-none rounded-xl block w-full px-4 py-3 border ${errors.email ? "border-red-500 bg-red-50" : "border-slate-200"} placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm`}
+              className={`${inputStyle} ${errors.email ? "border-red-500 bg-red-50" : ""}`}
               placeholder="Email address (Optional)"
             />
             {renderError("email")}
           </div>
 
-          {/* Phone & Division */}
+          {/* Phone + Division */}
           <div className="grid grid-cols-2 gap-3">
             <div>
               <input
@@ -151,17 +159,18 @@ export default function RegisterPage() {
                 type="text"
                 value={formData.phone}
                 onChange={handleChange}
-                className={`appearance-none rounded-xl block w-full px-4 py-3 border ${errors.phone ? "border-red-500 bg-red-50" : "border-slate-200"} placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm`}
+                className={`${inputStyle} ${errors.phone ? "border-red-500 bg-red-50" : ""}`}
                 placeholder="Phone"
               />
               {renderError("phone")}
             </div>
+
             <div>
               <select
                 name="division"
                 value={formData.division}
                 onChange={handleChange}
-                className={`block w-full px-4 py-3 border ${errors.division ? "border-red-500 bg-red-50" : "border-slate-200"} rounded-xl text-sm text-slate-500 font-medium`}
+                className={`${inputStyle} text-slate-600`}
               >
                 <option value="">Division</option>
                 {divisions.map((div) => (
@@ -181,63 +190,69 @@ export default function RegisterPage() {
               type="password"
               value={formData.password}
               onChange={handleChange}
-              className={`appearance-none rounded-xl block w-full px-4 py-3 border ${errors.password ? "border-red-500 bg-red-50" : "border-slate-200"} placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm`}
+              className={`${inputStyle} ${errors.password ? "border-red-500 bg-red-50" : ""}`}
               placeholder="Password"
             />
             {renderError("password")}
           </div>
 
+          {/* Divider */}
           <div className="relative py-2">
             <div className="absolute inset-0 flex items-center">
-              <span className="w-full border-t border-slate-100"></span>
+              <span className="w-full border-t border-slate-200"></span>
             </div>
-            <div className="relative flex justify-center text-[10px] uppercase tracking-widest font-black text-slate-400 bg-white px-2 italic">
+
+            <div className="relative flex justify-center text-[11px] uppercase font-bold text-slate-400 bg-white px-3">
               Network Details
             </div>
           </div>
 
-          {/* Referral & Placement */}
-          <div className="space-y-3">
+          {/* Referral */}
+          <div>
             <input
               name="reff_id"
               type="text"
               value={formData.reff_id}
               onChange={handleChange}
-              className="appearance-none rounded-xl block w-full px-4 py-3 border border-slate-200 placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm transition-all"
+              className={inputStyle}
               placeholder="Referral ID (Optional)"
             />
             {renderError("reff_id")}
-
-            <div className="grid grid-cols-2 gap-3">
-              <input
-                name="placement_id"
-                type="text"
-                value={formData.placement_id}
-                onChange={handleChange}
-                className={`appearance-none rounded-xl block w-full px-4 py-3 border ${errors.placement_id ? "border-red-500 bg-red-50" : "border-slate-200"} placeholder-slate-400 text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-500/20 text-sm transition-all`}
-                placeholder="Placement ID"
-              />
-              <select
-                name="position"
-                value={formData.position}
-                onChange={handleChange}
-                className={`block w-full px-4 py-3 border ${errors.position ? "border-red-500 bg-red-50" : "border-slate-200"} rounded-xl text-sm text-slate-500 transition-all`}
-              >
-                <option value="">Position</option>
-                <option value="left">Left</option>
-                <option value="right">Right</option>
-              </select>
-            </div>
-            {renderError("placement_id")}
           </div>
 
+          {/* Placement */}
+          <div className="grid grid-cols-2 gap-3">
+            <input
+              name="placement_id"
+              type="text"
+              value={formData.placement_id}
+              onChange={handleChange}
+              className={`${inputStyle} ${errors.placement_id ? "border-red-500 bg-red-50" : ""}`}
+              placeholder="Placement ID"
+            />
+
+            <select
+              name="position"
+              value={formData.position}
+              onChange={handleChange}
+              className={`${inputStyle} text-slate-600`}
+            >
+              <option value="">Position</option>
+              <option value="left">Left</option>
+              <option value="right">Right</option>
+            </select>
+          </div>
+
+          {renderError("placement_id")}
+
+          {/* Submit */}
           <button
             type="submit"
             disabled={loading}
-            className={`w-full flex justify-center py-3.5 px-4 border border-transparent text-sm font-black uppercase tracking-widest rounded-xl text-white transition-all shadow-blue-500/20 shadow-lg ${
+            className={`w-full py-3.5 rounded-xl text-white font-bold text-sm tracking-wide transition-all ${
               loading
-                ? "bg-blue-400 cursor-not-allowed scale-95"
-                : "bg-blue-600 hover:bg-blue-700 active:scale-95"
+                ? "bg-orange-300 cursor-not-allowed"
+                : "bg-[#FF620A] hover:bg-[#e45700]"
             }`}
           >
             {loading ? "Processing..." : "Register Now"}

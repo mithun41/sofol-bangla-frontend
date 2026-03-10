@@ -1,10 +1,14 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { getAllProducts, getAllCategories } from "@/services/productService";
+import {
+  getAllProducts,
+  getAllCategories,
+  getAllCategorie,
+} from "@/services/productService";
 import { useCart } from "@/context/CartContext";
-import { useRouter } from "next/navigation";
-import toast from "react-hot-toast";
+import { useRouter, useSearchParams } from "next/navigation"; // useSearchParams যোগ করলাম
+import toast, { Toaster } from "react-hot-toast";
 
 import ShopHeader from "./components/ShopHeader";
 import FilterSidebar from "./components/FilterSidebar";
@@ -13,6 +17,7 @@ import ProductGrid from "./components/ProductGrid";
 export default function ShopContent() {
   const { addToCart } = useCart();
   const router = useRouter();
+  const searchParams = useSearchParams(); // ইউআরএল এর প্যারামিটার ধরার জন্য
 
   const [products, setProducts] = useState([]);
   const [categories, setCategories] = useState([]);
@@ -26,11 +31,21 @@ export default function ShopContent() {
 
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
 
+  // --- নতুন লজিক: ইউআরএল থেকে ক্যাটাগরি আইডি নেওয়া ---
+  useEffect(() => {
+    const categoryId = searchParams.get("category");
+    if (categoryId) {
+      setSelectedCategory(categoryId);
+    } else {
+      setSelectedCategory("All");
+    }
+  }, [searchParams]);
+
   useEffect(() => {
     (async () => {
       const [prodRes, catRes] = await Promise.all([
         getAllProducts(),
-        getAllCategories(),
+        getAllCategorie(),
       ]);
 
       const data = Array.isArray(prodRes.data)
@@ -46,13 +61,11 @@ export default function ShopContent() {
 
   const handleAddToCart = (product) => {
     addToCart(product);
-
     toast.success(`${product.name} added to cart`);
   };
 
   const handleOrderNow = (product) => {
     addToCart(product);
-
     router.push("/checkout");
   };
 
@@ -74,12 +87,12 @@ export default function ShopContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
+      <Toaster position="top-right" /> {/* টোস্টার ভুলে গেলে চলবে না মামা */}
       <ShopHeader
         search={search}
         setSearch={setSearch}
         openFilter={() => setMobileFilterOpen(true)}
       />
-
       <div className="max-w-7xl mx-auto px-4 py-8 flex gap-8">
         <aside className="hidden lg:block w-64">
           <FilterSidebar
@@ -100,9 +113,7 @@ export default function ShopContent() {
           onOrderNow={handleOrderNow}
         />
       </div>
-
       {/* MOBILE FILTER */}
-
       {mobileFilterOpen && (
         <div className="fixed inset-0 z-[999] lg:hidden">
           <div

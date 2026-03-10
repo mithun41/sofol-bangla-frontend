@@ -12,6 +12,7 @@ export const getProductById = (id) => api.get(`products/${id}/`);
 
 // সব ক্যাটাগরি লিস্ট পাওয়ার জন্য
 export const getAllCategories = () => api.get("products/categories/");
+export const getAllCategorie = () => api.get("products/categories/?main=true");
 
 // ক্যাটাগরি ডিলিট করার জন্য
 export const deleteCategory = (id) => api.delete(`products/categories/${id}/`);

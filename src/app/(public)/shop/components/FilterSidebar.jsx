@@ -63,8 +63,6 @@ export default function FilterSidebar({
                 ) : (
                   <ChevronRight size={14} />
                 ))}
-
-              {selectedCategory === c.id && <Check size={14} />}
             </button>
 
             {/* Subcategories */}

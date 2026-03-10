@@ -1,4 +1,8 @@
 import api from "./api";
+import axios from "axios";
+
+// আপনার মেইন প্রজেক্টের URL স্ট্রাকচার অনুযায়ী বেস ইউআরএল
+const FULL_API_URL = "https://mithun41.pythonanywhere.com/api/accounts/";
 
 export const authService = {
   // ১. ইউজার রেজিস্ট্রেশন
@@ -11,7 +15,7 @@ export const authService = {
     }
   },
 
-  // ২. লগইন ফাংশন (টোকেন এবং ইউজার ডাটা লোকাল স্টোরেজে সেভ করবে)
+  // ২. লগইন ফাংশন
   login: async (credentials) => {
     try {
       const response = await api.post("accounts/login/", credentials);
@@ -20,7 +24,6 @@ export const authService = {
       if (access) {
         localStorage.setItem("access", access);
         localStorage.setItem("refresh_token", refresh);
-        // userinfo অবজেক্টটি সেভ করা হচ্ছে যাতে ড্যাশবোর্ডে নাম/ছবি দেখানো যায়
         localStorage.setItem("user", JSON.stringify(userinfo));
       }
       return response.data;
@@ -29,11 +32,10 @@ export const authService = {
     }
   },
 
-  // ৩. প্রোফাইল ডাটা ফেচ করা (লেটেস্ট ব্যালেন্স ও স্ট্যাটাসের জন্য)
+  // ৩. প্রোফাইল ডাটা ফেচ করা
   getProfile: async () => {
     try {
       const response = await api.get("accounts/profile/");
-      // প্রোফাইল আপডেট হলে লোকাল স্টোরেজের ডাটাও আপডেট করে রাখা ভালো
       localStorage.setItem("user", JSON.stringify(response.data));
       return response.data;
     } catch (error) {
@@ -41,18 +43,7 @@ export const authService = {
     }
   },
 
-  // ৪. প্রোফাইল আপডেট (ইউজার নিজে নাম বা ছবি চেঞ্জ করলে)
-  updateProfile: async (profileData) => {
-    try {
-      // যদি ছবি থাকে তবে FormData ব্যবহার করতে হতে পারে, নাহলে নরমাল অবজেক্ট
-      const response = await api.patch("accounts/profile/", profileData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || new Error("Profile Update Failed");
-    }
-  },
-
-  // ৫. পাসওয়ার্ড পরিবর্তনের ফাংশন
+  // ৫. পাসওয়ার্ড পরিবর্তনের ফাংশন (লগইন থাকা অবস্থায়)
   changePassword: async (passwordData) => {
     try {
       const response = await api.post(
@@ -65,6 +56,37 @@ export const authService = {
     }
   },
 
+  // ৮. ওটিপি রিকোয়েস্ট (সরাসরি axios ব্যবহার করা হয়েছে ইন্টারসেপ্টর এড়াতে)
+  requestOTP: async (phone) => {
+    try {
+      // এখানে const যোগ করা হয়েছে (আগে মিসিং ছিল)
+      const response = await axios.post(`${FULL_API_URL}forgot-password/`, {
+        phone,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: "OTP Request Failed" };
+    }
+  },
+
+  // authService.js এর ভেতরে
+  resetPassword: async (resetData) => {
+    try {
+      // সরাসরি axios ব্যবহার করুন যেন ইন্টারসেপ্টর ঝামেলা না করে
+      const response = await axios.post(
+        "https://mithun41.pythonanywhere.com/api/accounts/reset-password/",
+        {
+          phone: resetData.phone,
+          otp: resetData.otp,
+          new_password: resetData.new_password,
+        },
+      );
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: "Reset Failed" };
+    }
+  },
+
   logout: async () => {
     try {
       const refresh = localStorage.getItem("refresh_token");
@@ -72,20 +94,10 @@ export const authService = {
         await api.post("accounts/logout/", { refresh });
       }
     } catch (error) {
-      console.warn("Server-side logout failed, clearing local storage anyway.");
+      console.warn("Logout failed on server");
     } finally {
       localStorage.clear();
       window.location.href = "/login";
-    }
-  },
-
-  // ৭. অ্যাডমিন কর্তৃক ইউজার আপডেট
-  updateUserByAdmin: async (userId, userData) => {
-    try {
-      const response = await api.patch(`accounts/users/${userId}/`, userData);
-      return response.data;
-    } catch (error) {
-      throw error.response?.data || new Error("Admin Update Failed");
     }
   },
 };

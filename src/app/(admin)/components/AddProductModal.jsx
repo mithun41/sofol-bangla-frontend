@@ -1,7 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { X, Upload, CheckCircle2, Loader2, Banknote, Tag } from "lucide-react";
-import { getAllCategories, createProduct } from "@/services/productService";
+import { createProduct, getAllCategories } from "@/services/productService";
 
 export default function AddProductModal({ isOpen, onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);

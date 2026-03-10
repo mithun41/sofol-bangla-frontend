@@ -34,20 +34,21 @@ export default function LoginPage() {
     }
   };
 
-  // ২. ওটিপি রিকোয়েস্ট হ্যান্ডলার
+  // ২. ওটিপি রিকোয়েস্ট হ্যান্ডলার (Username + Phone)
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
-      const res = await authService.requestOTP(formData.phone);
+      // ব্যাকএন্ডে এখন username এবং phone দুইটাই পাঠাতে হবে
+      const res = await authService.requestOTP({
+        username: formData.username,
+        phone: formData.phone,
+      });
       toast.success(res.message || "OTP sent to your phone!");
-      setMode("reset"); // ওটিপি সাকসেস হলে রিসেট মোডে নিয়ে যাবে
+      setMode("reset");
     } catch (err) {
-      // ব্যাকএন্ড থেকে আসা এরর মেসেজ ডাইনামিকালি ধরার জন্য
-      const msg = err.phone
-        ? err.phone[0]
-        : err.message || "Failed to send OTP";
+      const msg = err.message || "User not found with these details";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -55,25 +56,23 @@ export default function LoginPage() {
     }
   };
 
-  // ৩. পাসওয়ার্ড রিসেট হ্যান্ডলার
+  // ৩. পাসওয়ার্ড রিসেট হ্যান্ডলার (Username + Phone + OTP + New Password)
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
       await authService.resetPassword({
+        username: formData.username, // ব্যাকএন্ডের নতুন লজিক অনুযায়ী এটি প্রয়োজন
         phone: formData.phone,
         otp: formData.otp,
         new_password: formData.new_password,
       });
       toast.success("Password reset successful! Please login.");
       setMode("login");
-      // ডাটা ক্লিয়ার করে দেওয়া ভালো
       setFormData({ ...formData, otp: "", new_password: "" });
     } catch (err) {
-      const msg = err.non_field_errors
-        ? err.non_field_errors[0]
-        : err.message || "Invalid OTP or request";
+      const msg = err.message || "Invalid OTP or request";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -86,7 +85,7 @@ export default function LoginPage() {
       <div className="p-8 bg-white shadow-xl rounded-2xl w-full max-w-md border border-gray-100">
         <h2 className="text-2xl font-black mb-6 text-center text-slate-800">
           {mode === "login" && "Welcome Back"}
-          {mode === "forgot" && "Forgot Password"}
+          {mode === "forgot" && "Reset Identity"}
           {mode === "reset" && "Verify OTP"}
         </h2>
 
@@ -102,7 +101,8 @@ export default function LoginPage() {
             <input
               type="text"
               placeholder="Username"
-              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+              value={formData.username}
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
               }
@@ -111,7 +111,8 @@ export default function LoginPage() {
             <input
               type="password"
               placeholder="Password"
-              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 transition-all text-sm"
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+              value={formData.password}
               onChange={(e) =>
                 setFormData({ ...formData, password: e.target.value })
               }
@@ -132,22 +133,32 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-blue-600 text-white p-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 transition active:scale-95 shadow-lg shadow-blue-500/20 disabled:bg-blue-400"
+              className="w-full bg-blue-600 text-white p-3.5 rounded-xl font-black uppercase tracking-widest text-xs hover:bg-blue-700 disabled:bg-blue-400 shadow-lg shadow-blue-500/20"
             >
               {submitting ? "Checking..." : "Sign In"}
             </button>
           </form>
         )}
 
-        {/* --- FORGOT PASSWORD FORM (Phone Input) --- */}
+        {/* --- FORGOT PASSWORD FORM (Username + Phone) --- */}
         {mode === "forgot" && (
           <form onSubmit={handleRequestOTP} className="space-y-4">
             <p className="text-xs text-slate-500 text-center mb-2">
-              Enter your registered phone number to receive an OTP.
+              Enter your <b>Username</b> and <b>Phone</b> to receive an OTP.
             </p>
             <input
               type="text"
-              placeholder="Phone Number"
+              placeholder="Your Username"
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+              value={formData.username}
+              onChange={(e) =>
+                setFormData({ ...formData, username: e.target.value })
+              }
+              required
+            />
+            <input
+              type="text"
+              placeholder="Phone Number (e.g. 017...)"
               className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
               value={formData.phone}
               onChange={(e) =>
@@ -172,12 +183,12 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* --- RESET PASSWORD FORM (OTP + New Password) --- */}
+        {/* --- RESET PASSWORD FORM (Username + OTP + New Password) --- */}
         {mode === "reset" && (
           <form onSubmit={handleResetPassword} className="space-y-4">
             <div className="bg-blue-50 p-3 rounded-lg text-center mb-2">
               <p className="text-[10px] uppercase tracking-wider text-blue-600 font-bold">
-                OTP sent to
+                Account: {formData.username}
               </p>
               <p className="text-sm font-bold text-slate-700">
                 {formData.phone}
@@ -187,6 +198,7 @@ export default function LoginPage() {
               type="text"
               placeholder="6-Digit OTP"
               className="w-full p-3.5 border border-slate-200 rounded-xl text-center text-lg font-bold tracking-[10px] outline-none focus:ring-2 focus:ring-blue-500/20"
+              value={formData.otp}
               onChange={(e) =>
                 setFormData({ ...formData, otp: e.target.value })
               }
@@ -195,12 +207,13 @@ export default function LoginPage() {
             />
             <input
               type="password"
-              placeholder="New Password"
+              placeholder="New Password (min 6 chars)"
               className="w-full p-3.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+              value={formData.new_password}
               onChange={(e) =>
                 setFormData({ ...formData, new_password: e.target.value })
               }
-              minLength={6} // ✅ এটি যোগ করুন
+              minLength={6}
               required
             />
             <button
@@ -209,13 +222,6 @@ export default function LoginPage() {
               className="w-full bg-green-600 text-white p-3.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 disabled:bg-green-400"
             >
               {submitting ? "Resetting..." : "Reset Password"}
-            </button>
-            <button
-              type="button"
-              onClick={() => setMode("forgot")}
-              className="text-center w-full text-xs font-bold text-slate-400 mt-2"
-            >
-              Resend OTP?
             </button>
           </form>
         )}

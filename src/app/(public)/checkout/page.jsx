@@ -27,6 +27,7 @@ export default function CheckoutPage() {
     phone: "",
     address: "",
     city: "Dhaka",
+    courier: "Sundarban Courier",
     senderNumber: "",
     transactionId: "",
   });
@@ -79,6 +80,7 @@ export default function CheckoutPage() {
       phone: formData.phone,
       address: formData.address,
       city: formData.city,
+      courier: formData.courier,
       items: cart.map((i) => {
         const basePrice = Number(i.price || 0);
         const pv = Number(i.point_value || 0);
@@ -233,7 +235,26 @@ export default function CheckoutPage() {
                     <option value="Outside">Outside Dhaka (৳150)</option>
                   </select>
                 </div>
-
+                <div className="space-y-2 md:col-span-2">
+                  <label className="text-sm font-bold text-slate-600">
+                    Select Courier Service
+                  </label>
+                  <select
+                    name="courier"
+                    value={formData.courier}
+                    onChange={handleInputChange}
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition"
+                  >
+                    <option value="Sundarban Courier">
+                      Sundarban Courier Service
+                    </option>
+                    <option value="SA Paribahan">SA Paribahan</option>
+                    <option value="Steadfast Courier">Steadfast Courier</option>
+                    <option value="Pathao Courier">Pathao Courier</option>
+                    <option value="RedX">RedX Delivery</option>
+                    <option value="Korotoa Courier">Korotoa Courier</option>
+                  </select>
+                </div>
                 <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-bold text-slate-600">
                     Full Address

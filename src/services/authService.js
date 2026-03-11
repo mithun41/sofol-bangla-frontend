@@ -43,6 +43,19 @@ export const authService = {
     }
   },
 
+  // ৯. অ্যাডমিন ইউজার আপডেট করবে (Referrer, Placement, Position)
+  updateUserByAdmin: async (userId, payload) => {
+    try {
+      // তোর urls.py অনুযায়ী সঠিক এন্ডপয়েন্ট হলো: accounts/users/{id}/
+      const response = await api.patch(`accounts/users/${userId}/`, payload);
+      return response.data;
+    } catch (error) {
+      // এরর মেসেজটা কনসোলে দেখার জন্য
+      console.error("Backend Error Details:", error.response?.data);
+      throw error.response?.data || new Error("Admin Update Failed");
+    }
+  },
+
   // ৫. পাসওয়ার্ড পরিবর্তনের ফাংশন (লগইন থাকা অবস্থায়)
   changePassword: async (passwordData) => {
     try {
@@ -57,10 +70,13 @@ export const authService = {
   },
 
   // ৮. ওটিপি রিকোয়েস্ট (সরাসরি axios ব্যবহার করা হয়েছে ইন্টারসেপ্টর এড়াতে)
-  requestOTP: async (phone) => {
+  // services/authService.js
+
+  requestOTP: async ({ username, phone }) => {
+    // এখানে অবজেক্ট ডিস্ট্রাকচারিং করা হয়েছে
     try {
-      // এখানে const যোগ করা হয়েছে (আগে মিসিং ছিল)
       const response = await axios.post(`${FULL_API_URL}forgot-password/`, {
+        username, // ব্যাকএন্ডের জন্য নতুন ফিল্ড
         phone,
       });
       return response.data;
@@ -69,13 +85,12 @@ export const authService = {
     }
   },
 
-  // authService.js এর ভেতরে
   resetPassword: async (resetData) => {
     try {
-      // সরাসরি axios ব্যবহার করুন যেন ইন্টারসেপ্টর ঝামেলা না করে
       const response = await axios.post(
         "https://mithun41.pythonanywhere.com/api/accounts/reset-password/",
         {
+          username: resetData.username, // এটিও মাস্ট লাগবে
           phone: resetData.phone,
           otp: resetData.otp,
           new_password: resetData.new_password,

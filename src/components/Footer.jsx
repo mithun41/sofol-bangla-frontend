@@ -33,7 +33,10 @@ export default function Footer() {
 
           {/* Social Icons */}
           <div className="flex space-x-5">
-            <a className="hover:text-[#FF620A] transition-all transform hover:scale-110">
+            <a
+              href="https://www.facebook.com/share/17vdmRCa6C/"
+              className="hover:text-[#FF620A] transition-all transform hover:scale-110"
+            >
               <Facebook size={20} />
             </a>
 

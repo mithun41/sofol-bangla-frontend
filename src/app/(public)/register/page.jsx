@@ -156,7 +156,7 @@ export default function RegisterPage() {
             <div>
               <input
                 name="phone"
-                type="text"
+                type="number"
                 value={formData.phone}
                 onChange={handleChange}
                 className={`${inputStyle} ${errors.phone ? "border-red-500 bg-red-50" : ""}`}

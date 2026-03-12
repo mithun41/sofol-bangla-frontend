@@ -13,6 +13,7 @@ import {
   Check,
 } from "lucide-react";
 import Link from "next/link";
+import { orderService } from "@/services/order";
 
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
@@ -105,33 +106,24 @@ export default function CheckoutPage() {
     };
 
     try {
-      const response = await fetch(
-        "https://mithun41.pythonanywhere.com/api/orders/place-order/",
-        {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${localStorage.getItem("access")}`,
-          },
-          body: JSON.stringify(orderData),
-        },
-      );
+      const res = await orderService.placeOrder(orderData);
 
-      const res = await response.json();
-
-      if (response.ok) {
+      if (res && res.order_id) {
         clearCart();
         router.push(`/order-success?id=${res.order_id}`);
       } else {
-        alert(res.error || "Order failed! Please check your information.");
+        alert("Order processed but ID not found.");
       }
     } catch (error) {
-      alert("Server connection error!");
+      const errorMessage =
+        error.response?.data?.error ||
+        "Order failed! Please check your information.";
+      alert(errorMessage);
+      console.error("Order Error:", error);
     } finally {
       setOrderLoading(false);
     }
   };
-
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">

@@ -17,14 +17,17 @@ import {
   ChevronRight,
   ChevronsLeft,
   ChevronsRight,
-  ArrowUpDown,
   ShoppingBag,
-  TrendingUp,
   Clock,
   CheckCircle2,
   XCircle,
   Truck,
   RefreshCw,
+  Hash,
+  CalendarDays,
+  BadgeDollarSign,
+  CircleDollarSign,
+  ShieldCheck,
 } from "lucide-react";
 
 const ORDERS_PER_PAGE = 20;
@@ -89,6 +92,20 @@ function StatCard({ label, value, icon: Icon, color }) {
         <p className="text-2xl font-black text-slate-800">{value}</p>
         <p className="text-xs text-slate-400 font-medium mt-0.5">{label}</p>
       </div>
+    </div>
+  );
+}
+
+function InfoCard({ icon: Icon, title, children, className = "" }) {
+  return (
+    <div
+      className={`rounded-2xl border border-slate-200 bg-white p-5 shadow-sm ${className}`}
+    >
+      <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.18em] mb-3 flex items-center gap-2">
+        <Icon size={13} />
+        {title}
+      </h4>
+      {children}
     </div>
   );
 }
@@ -224,6 +241,7 @@ export default function AdminOrdersPage() {
       cancelButtonText: "Cancel",
       borderRadius: "1.5rem",
     });
+
     if (result.isConfirmed) {
       try {
         await api.patch(`orders/admin-update/${id}/`, { status: newStatus });
@@ -277,7 +295,6 @@ export default function AdminOrdersPage() {
     setCurrentPage(1);
   };
 
-  // Stats
   const stats = {
     total: orders.length,
     pending: orders.filter((o) => o.status === "Pending").length,
@@ -300,7 +317,6 @@ export default function AdminOrdersPage() {
   return (
     <div className="p-4 md:p-8 bg-[#F8FAFC] min-h-screen">
       <div className="max-w-7xl mx-auto space-y-6">
-        {/* Header */}
         <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
           <div>
             <h1 className="text-2xl font-black text-slate-900 tracking-tight">
@@ -319,7 +335,6 @@ export default function AdminOrdersPage() {
           </button>
         </div>
 
-        {/* Stats */}
         <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
           <StatCard
             label="Total Orders"
@@ -347,7 +362,6 @@ export default function AdminOrdersPage() {
           />
         </div>
 
-        {/* Filters */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 flex flex-col md:flex-row gap-4">
           <div className="relative flex-1">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
@@ -376,7 +390,6 @@ export default function AdminOrdersPage() {
           </div>
         </div>
 
-        {/* Table */}
         <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
           {paginatedOrders.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-20 text-slate-400">
@@ -420,7 +433,6 @@ export default function AdminOrdersPage() {
                           index % 2 === 0 ? "bg-white" : "bg-slate-50/30"
                         }`}
                       >
-                        {/* Product */}
                         <td className="px-6 py-4">
                           <div className="flex items-center gap-3">
                             <div className="relative w-12 h-12 rounded-xl bg-slate-100 border border-slate-200 overflow-hidden flex-shrink-0 shadow-sm">
@@ -458,7 +470,6 @@ export default function AdminOrdersPage() {
                           </div>
                         </td>
 
-                        {/* Order */}
                         <td className="px-6 py-4">
                           <p className="text-sm font-bold text-blue-600 font-mono">
                             {order.order_number}
@@ -475,7 +486,6 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
-                        {/* Customer */}
                         <td className="px-6 py-4">
                           <p className="text-sm font-semibold text-slate-800">
                             {order.name}
@@ -486,7 +496,6 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
-                        {/* Amount */}
                         <td className="px-6 py-4">
                           <p className="text-sm font-black text-slate-900">
                             ৳{Number(order.total_amount).toLocaleString()}
@@ -496,12 +505,10 @@ export default function AdminOrdersPage() {
                           </p>
                         </td>
 
-                        {/* Status */}
                         <td className="px-6 py-4">
                           <StatusBadge status={order.status} />
                         </td>
 
-                        {/* Actions */}
                         <td className="px-6 py-4">
                           <div className="flex items-center justify-center gap-2">
                             <button
@@ -532,7 +539,6 @@ export default function AdminOrdersPage() {
                 </table>
               </div>
 
-              {/* Pagination */}
               <Pagination
                 currentPage={currentPage}
                 totalPages={totalPages}
@@ -542,7 +548,6 @@ export default function AdminOrdersPage() {
           )}
         </div>
 
-        {/* Footer note */}
         <p className="text-center text-xs text-slate-400 pb-4">
           Showing{" "}
           {Math.min(
@@ -554,68 +559,28 @@ export default function AdminOrdersPage() {
         </p>
       </div>
 
-      {/* Detail Modal */}
       {selectedOrder && (
         <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/60 backdrop-blur-md"
           onClick={(e) =>
             e.target === e.currentTarget && setSelectedOrder(null)
           }
         >
-          <div className="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden max-h-[92vh] flex flex-col">
-            {/* Modal Header */}
-            <div className="px-7 py-5 border-b border-slate-100 flex justify-between items-center">
-              <div>
-                <h2 className="text-lg font-black text-slate-900">
-                  Order Details
-                </h2>
-                <p className="text-sm font-mono text-blue-600 font-bold mt-0.5">
-                  {selectedOrder.order_number}
-                </p>
-              </div>
-              <button
-                onClick={() => setSelectedOrder(null)}
-                className="w-9 h-9 flex items-center justify-center rounded-xl hover:bg-rose-50 hover:text-rose-500 text-slate-400 transition-all"
-              >
-                <X size={20} />
-              </button>
-            </div>
-
-            <div className="p-7 overflow-y-auto space-y-5 flex-1">
-              {/* Info Grid */}
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div className="p-5 bg-slate-50 rounded-2xl border border-slate-100">
-                  <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <User size={12} /> Customer Details
-                  </h4>
-                  <p className="font-bold text-slate-800 text-sm">
-                    {selectedOrder.name}
+          <div className="bg-white w-full max-w-4xl rounded-[28px] shadow-2xl overflow-hidden max-h-[92vh] flex flex-col border border-white/60">
+            <div className="relative px-7 py-6 border-b border-slate-100 bg-gradient-to-r from-slate-900 via-slate-800 to-slate-900">
+              <div className="absolute inset-0 opacity-20 bg-[radial-gradient(circle_at_top_right,_#60a5fa,_transparent_35%)]" />
+              <div className="relative flex justify-between items-start gap-4">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.25em] text-slate-400 font-bold">
+                    Order Details
                   </p>
-                  <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                    <Phone size={11} /> {selectedOrder.phone}
-                  </p>
-                  <p className="text-xs text-slate-500 mt-2 flex items-start gap-1">
-                    <MapPin
-                      size={11}
-                      className="text-blue-500 mt-0.5 flex-shrink-0"
-                    />
-                    {selectedOrder.address}, {selectedOrder.city}
-                  </p>
-                </div>
-
-                <div className="p-5 bg-gradient-to-br from-blue-600 to-blue-700 rounded-2xl text-white">
-                  <h4 className="text-[10px] font-black text-blue-200 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                    <CreditCard size={12} /> Payment Info
-                  </h4>
-                  <p className="text-base font-black uppercase tracking-wide">
-                    {selectedOrder.payment_method}
-                  </p>
-                  <p className="text-xs opacity-70 mt-2">
-                    Txn ID: {selectedOrder.transaction_id || "N/A"}
-                  </p>
-                  <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
+                  <h2 className="text-2xl font-black text-white mt-1">
+                    {selectedOrder.order_number}
+                  </h2>
+                  <div className="flex items-center gap-3 mt-3 flex-wrap">
                     <StatusBadge status={selectedOrder.status} />
-                    <p className="text-xs opacity-70">
+                    <span className="text-xs text-slate-300 flex items-center gap-1.5">
+                      <CalendarDays size={13} />
                       {new Date(selectedOrder.created_at).toLocaleDateString(
                         "en-GB",
                         {
@@ -624,79 +589,197 @@ export default function AdminOrdersPage() {
                           year: "numeric",
                         },
                       )}
-                    </p>
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  onClick={() => setSelectedOrder(null)}
+                  className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-rose-500 text-white transition-all"
+                >
+                  <X size={18} />
+                </button>
+              </div>
+            </div>
+
+            <div className="p-6 md:p-7 overflow-y-auto space-y-6 flex-1 bg-slate-50">
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <InfoCard icon={User} title="Customer Info">
+                  <p className="text-base font-bold text-slate-900">
+                    {selectedOrder.name}
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <Phone size={14} className="text-blue-500" />
+                    {selectedOrder.phone}
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-start gap-2">
+                    <MapPin size={14} className="text-blue-500 mt-0.5" />
+                    <span>
+                      {selectedOrder.address}, {selectedOrder.city}
+                    </span>
+                  </p>
+                </InfoCard>
+
+                <InfoCard icon={CreditCard} title="Payment Info">
+                  <p className="text-base font-black text-slate-900 uppercase">
+                    {selectedOrder.payment_method}
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <Hash size={14} className="text-blue-500" />
+                    Txn ID: {selectedOrder.transaction_id || "N/A"}
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <Hash size={14} className="text-blue-500" />
+                    Phone: {selectedOrder.sender_number || "N/A"}
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <CircleDollarSign size={14} className="text-emerald-500" />
+                    Total: ৳
+                    {Number(selectedOrder.total_amount).toLocaleString()}
+                  </p>
+                </InfoCard>
+
+                <InfoCard icon={Truck} title="Delivery Info">
+                  <p className="text-base font-bold text-slate-900">
+                    Sundarban Courier
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <Truck size={14} className="text-violet-500" />
+                    Courier: Sundarban Courier
+                  </p>
+                  <p className="text-sm text-slate-500 mt-2 flex items-center gap-2">
+                    <ShieldCheck size={14} className="text-emerald-500" />
+                    Delivery status: {selectedOrder.status}
+                  </p>
+                </InfoCard>
+              </div>
+
+              <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                <div className="lg:col-span-2 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
+                  <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.18em] mb-4 flex items-center gap-2">
+                    <Package size={13} />
+                    Ordered Products ({selectedOrder.items?.length || 0})
+                  </h4>
+
+                  <div className="space-y-3">
+                    {selectedOrder.items?.map((item, idx) => (
+                      <div
+                        key={idx}
+                        className="flex items-center justify-between gap-3 p-4 rounded-2xl border border-slate-200 bg-slate-50 hover:bg-white hover:border-slate-300 transition-all"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <div className="w-14 h-14 bg-white rounded-2xl overflow-hidden border border-slate-200 shadow-sm flex-shrink-0">
+                            {item.product_image ? (
+                              <img
+                                src={item.product_image}
+                                alt={item.product_name || "Product"}
+                                className="w-full h-full object-cover"
+                              />
+                            ) : (
+                              <div className="w-full h-full flex items-center justify-center">
+                                <ImageIcon
+                                  size={16}
+                                  className="text-slate-300"
+                                />
+                              </div>
+                            )}
+                          </div>
+
+                          <div className="min-w-0">
+                            <p className="text-sm font-bold text-slate-800 truncate">
+                              {item.product_name}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              Quantity: {item.quantity}
+                            </p>
+                            <p className="text-xs text-slate-400 mt-1">
+                              Unit Price: ৳{Number(item.price).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="text-right shrink-0">
+                          <p className="text-sm font-black text-slate-900">
+                            ৳{(item.price * item.quantity).toLocaleString()}
+                          </p>
+                          <p className="text-[11px] text-emerald-600 font-semibold mt-1">
+                            +{item.point_value * item.quantity} PV
+                          </p>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="rounded-3xl border border-slate-200 bg-white shadow-sm overflow-hidden h-fit">
+                  <div className="px-5 py-4 border-b border-slate-100 bg-slate-50">
+                    <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-[0.18em] flex items-center gap-2">
+                      <BadgeDollarSign size={13} />
+                      Order Summary
+                    </h4>
+                  </div>
+
+                  <div className="p-5 space-y-3">
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Subtotal</span>
+                      <span className="font-semibold text-slate-800">
+                        ৳{Number(selectedOrder.subtotal).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Shipping</span>
+                      <span className="font-semibold text-slate-800">
+                        ৳{Number(selectedOrder.shipping_cost).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="flex items-center justify-between text-sm">
+                      <span className="text-slate-500">Courier</span>
+                      <span className="font-semibold text-slate-800">
+                        Sundarban Courier
+                      </span>
+                    </div>
+
+                    <div className="border-t border-dashed border-slate-200 pt-3 flex items-center justify-between">
+                      <span className="text-sm font-bold text-slate-700">
+                        Total Payable
+                      </span>
+                      <span className="text-2xl font-black text-slate-900">
+                        ৳{Number(selectedOrder.total_amount).toLocaleString()}
+                      </span>
+                    </div>
+
+                    <div className="pt-2">
+                      <div className="rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 px-4 py-3 text-white">
+                        <p className="text-[11px] uppercase tracking-[0.18em] text-blue-100 font-bold">
+                          Payment Method
+                        </p>
+                        <p className="text-sm font-bold mt-1 uppercase">
+                          {selectedOrder.payment_method}
+                        </p>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
 
-              {/* Items */}
-              <div>
-                <h4 className="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-1.5">
-                  <Package size={12} /> Products ({selectedOrder.items?.length})
-                </h4>
-                <div className="space-y-2">
-                  {selectedOrder.items?.map((item, idx) => (
-                    <div
-                      key={idx}
-                      className="flex items-center justify-between p-4 bg-slate-50 border border-slate-100 rounded-2xl hover:border-slate-200 transition-colors"
-                    >
-                      <div className="flex items-center gap-3">
-                        <div className="w-11 h-11 bg-white rounded-xl overflow-hidden border border-slate-200 shadow-sm flex-shrink-0">
-                          {item.product_image ? (
-                            <img
-                              src={item.product_image}
-                              alt=""
-                              className="w-full h-full object-cover"
-                            />
-                          ) : (
-                            <div className="w-full h-full flex items-center justify-center">
-                              <ImageIcon size={14} className="text-slate-300" />
-                            </div>
-                          )}
-                        </div>
-                        <div>
-                          <p className="text-sm font-semibold text-slate-800">
-                            {item.product_name}
-                          </p>
-                          <p className="text-[11px] text-slate-400 mt-0.5">
-                            Qty: {item.quantity}
-                          </p>
-                        </div>
-                      </div>
-                      <div className="text-right">
-                        <p className="text-sm font-black text-slate-900">
-                          ৳{(item.price * item.quantity).toLocaleString()}
-                        </p>
-                        <p className="text-[10px] text-emerald-600 font-semibold mt-0.5">
-                          +{item.point_value * item.quantity} PV
-                        </p>
-                      </div>
-                    </div>
-                  ))}
+              <div className="rounded-2xl border border-slate-200 bg-white px-5 py-4 shadow-sm flex flex-col md:flex-row md:items-center md:justify-between gap-3">
+                <div>
+                  <p className="text-xs uppercase tracking-[0.18em] text-slate-400 font-bold">
+                    Admin Note
+                  </p>
+                  <p className="text-sm text-slate-600 mt-1">
+                    Courier assigned:{" "}
+                    <span className="font-semibold">Sundarban Courier</span>
+                  </p>
                 </div>
-              </div>
 
-              {/* Summary */}
-              <div className="rounded-2xl overflow-hidden border border-slate-100">
-                <div className="bg-slate-50 px-5 py-3 flex justify-between text-sm text-slate-500 border-b border-slate-100">
-                  <span>Subtotal</span>
-                  <span className="font-semibold text-slate-700">
-                    ৳{Number(selectedOrder.subtotal).toLocaleString()}
+                <div className="flex items-center gap-2">
+                  <span className="text-sm text-slate-500">
+                    Current Status:
                   </span>
-                </div>
-                <div className="bg-slate-50 px-5 py-3 flex justify-between text-sm text-slate-500 border-b border-slate-100">
-                  <span>Shipping</span>
-                  <span className="font-semibold text-slate-700">
-                    ৳{Number(selectedOrder.shipping_cost).toLocaleString()}
-                  </span>
-                </div>
-                <div className="bg-slate-900 px-5 py-4 flex justify-between items-center">
-                  <span className="text-sm font-bold text-slate-300">
-                    Total Payable
-                  </span>
-                  <span className="text-xl font-black text-white">
-                    ৳{Number(selectedOrder.total_amount).toLocaleString()}
-                  </span>
+                  <StatusBadge status={selectedOrder.status} />
                 </div>
               </div>
             </div>

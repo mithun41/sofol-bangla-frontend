@@ -114,30 +114,46 @@ export default function POSPage() {
       playBeep();
       setBarcode("");
     } catch (err) {
-      toast.error("প্রোডাক্ট পাওয়া যায়নি!");
+      toast.error("Product not found!"); // Updated
       setBarcode("");
     } finally {
       setScanLoading(false);
     }
   };
 
-  const handleQuickRegisterSuccess = (newCustomer) => {
-    setSelectedCustomer(newCustomer);
-    setCustomerSearch("");
-    toast.success(`${newCustomer.username} এখন সিলেক্টেড!`);
-  };
+  // src/app/(admin)/admin-dashboard/pos/page.jsx
 
+  const handleQuickRegisterSuccess = (res) => {
+    console.log("Received Response:", res);
+
+    // মামা, এখানে user_info (underscore সহ) অ্যাড করে দিলাম
+    const userData =
+      res?.user_info || res?.userinfo || res?.user || res?.data || res;
+
+    // চেক করছি userData এর ভেতর প্রয়োজনীয় প্রপার্টি আছে কি না
+    if (userData && (userData.username || userData.id || userData.name)) {
+      setSelectedCustomer(userData);
+      setCustomerSearch("");
+      setCustomers([]);
+
+      const displayName = userData.name || userData.username || "Customer";
+      toast.success(`${displayName} registered and selected!`);
+    } else {
+      console.error("Invalid user data structure:", res);
+      toast.error("Registration successful! Please search to select.");
+    }
+  };
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      toast.error("কার্টে কোনো প্রোডাক্ট নেই!");
+      toast.error("Cart is empty!"); // Updated
       return;
     }
     if (!selectedCustomer) {
-      toast.error("দয়া করে একজন কাস্টমার সিলেক্ট করুন!");
+      toast.error("Please select a customer!"); // Updated
       return;
     }
 
-    if (!window.confirm("আপনি কি এই বিক্রিটি সম্পন্ন করতে চান?")) return;
+    if (!window.confirm("Are you sure you want to complete this sale?")) return; // Updated
 
     const orderData = {
       customer_id: selectedCustomer.id,
@@ -145,21 +161,17 @@ export default function POSPage() {
       items: cart.map((item) => ({
         product_id: item.id,
         quantity: item.quantity,
-        price: getEffectivePrice(item), // ডিসকাউন্টেড প্রাইস পাঠানো
+        price: getEffectivePrice(item),
       })),
     };
 
     setIsSubmitting(true);
     try {
       const res = await api.post("pos/order/create/", orderData);
-
-      // প্রিন্টের জন্য ডাটা সেট করা
       setLastOrder(res.data);
-      setPrintCart([...cart]); // কার্ট ক্লিয়ার হওয়ার আগে ডাটা কপি করে রাখা
+      setPrintCart([...cart]);
+      toast.success("Order completed successfully!"); // Updated
 
-      toast.success("বিক্রি সফল হয়েছে!");
-
-      // একটু সময় দিয়ে প্রিন্ট ডায়ালগ ওপেন করা
       setTimeout(() => {
         handlePrint();
         clearCart();
@@ -167,7 +179,7 @@ export default function POSPage() {
       }, 500);
     } catch (err) {
       toast.error(
-        err.response?.data?.error || "অর্ডার সম্পন্ন করতে সমস্যা হয়েছে!",
+        err.response?.data?.error || "Failed to complete order!", // Updated
       );
     } finally {
       setIsSubmitting(false);

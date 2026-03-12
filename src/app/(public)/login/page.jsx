@@ -7,8 +7,8 @@ import toast from "react-hot-toast";
 export default function LoginPage() {
   const { login } = useAuth();
 
-  // স্টেটস
-  const [mode, setMode] = useState("login"); // login, forgot, reset
+  // মোড সমূহ: login, forgot (Username+Phone), verify (OTP Check), final (New Password)
+  const [mode, setMode] = useState("login");
   const [formData, setFormData] = useState({
     username: "",
     password: "",
@@ -19,7 +19,7 @@ export default function LoginPage() {
   const [error, setError] = useState("");
   const [submitting, setSubmitting] = useState(false);
 
-  // ১. সাধারণ লগইন হ্যান্ডলার
+  // ১. লগইন হ্যান্ডলার
   const handleLogin = async (e) => {
     e.preventDefault();
     setSubmitting(true);
@@ -34,21 +34,20 @@ export default function LoginPage() {
     }
   };
 
-  // ২. ওটিপি রিকোয়েস্ট হ্যান্ডলার (Username + Phone)
+  // ২. ধাপ ১: ওটিপি রিকোয়েস্ট (Forgot Password)
   const handleRequestOTP = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
-      // ব্যাকএন্ডে এখন username এবং phone দুইটাই পাঠাতে হবে
       const res = await authService.requestOTP({
         username: formData.username,
         phone: formData.phone,
       });
-      toast.success(res.message || "OTP sent to your phone!");
-      setMode("reset");
+      toast.success(res.message || "OTP sent successfully!");
+      setMode("verify"); // ওটিপি পাঠানোর পর ভেরিফাই মোডে যাবে
     } catch (err) {
-      const msg = err.message || "User not found with these details";
+      const msg = err.message || "User not found";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -56,23 +55,49 @@ export default function LoginPage() {
     }
   };
 
-  // ৩. পাসওয়ার্ড রিসেট হ্যান্ডলার (Username + Phone + OTP + New Password)
+  // ৩. ধাপ ২: ওটিপি ভেরিফাই হ্যান্ডলার
+  const handleVerifyOTP = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    setError("");
+    try {
+      await authService.verifyOTP({
+        username: formData.username,
+        phone: formData.phone,
+        otp: formData.otp,
+      });
+      toast.success("OTP Verified! Set your new password.");
+      setMode("final"); // ওটিপি সঠিক হলে পাসওয়ার্ড রিসেট মোডে যাবে
+    } catch (err) {
+      const msg = err.message || "Invalid OTP";
+      setError(msg);
+      toast.error(msg);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  // ৪. ধাপ ৩: ফাইনাল পাসওয়ার্ড রিসেট
   const handleResetPassword = async (e) => {
     e.preventDefault();
     setSubmitting(true);
     setError("");
     try {
       await authService.resetPassword({
-        username: formData.username, // ব্যাকএন্ডের নতুন লজিক অনুযায়ী এটি প্রয়োজন
-        phone: formData.phone,
-        otp: formData.otp,
+        username: formData.username,
         new_password: formData.new_password,
       });
       toast.success("Password reset successful! Please login.");
       setMode("login");
-      setFormData({ ...formData, otp: "", new_password: "" });
+      setFormData({
+        username: "",
+        password: "",
+        phone: "",
+        otp: "",
+        new_password: "",
+      });
     } catch (err) {
-      const msg = err.message || "Invalid OTP or request";
+      const msg = err.message || "Reset failed";
       setError(msg);
       toast.error(msg);
     } finally {
@@ -83,15 +108,16 @@ export default function LoginPage() {
   return (
     <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4">
       <div className="p-8 bg-white shadow-xl rounded-2xl w-full max-w-md border border-gray-100">
-        <h2 className="text-2xl font-black mb-6 text-center text-slate-800">
+        <h2 className="text-2xl font-black mb-6 text-center text-slate-800 uppercase tracking-tight">
           {mode === "login" && "Welcome Back"}
-          {mode === "forgot" && "Reset Identity"}
-          {mode === "reset" && "Verify OTP"}
+          {mode === "forgot" && "Forgot Identity"}
+          {mode === "verify" && "Enter OTP"}
+          {mode === "final" && "New Password"}
         </h2>
 
         {error && (
           <p className="text-red-500 text-xs mb-4 bg-red-50 p-3 rounded-lg text-center font-medium border border-red-100">
-            {error}
+            {typeof error === "string" ? error : "Something went wrong"}
           </p>
         )}
 
@@ -140,16 +166,13 @@ export default function LoginPage() {
           </form>
         )}
 
-        {/* --- FORGOT PASSWORD FORM (Username + Phone) --- */}
+        {/* --- FORGOT FORM (Step 1) --- */}
         {mode === "forgot" && (
           <form onSubmit={handleRequestOTP} className="space-y-4">
-            <p className="text-xs text-slate-500 text-center mb-2">
-              Enter your <b>Username</b> and <b>Phone</b> to receive an OTP.
-            </p>
             <input
               type="text"
-              placeholder="Your Username"
-              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+              placeholder="Username"
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none text-sm"
               value={formData.username}
               onChange={(e) =>
                 setFormData({ ...formData, username: e.target.value })
@@ -158,8 +181,8 @@ export default function LoginPage() {
             />
             <input
               type="text"
-              placeholder="Phone Number (e.g. 017...)"
-              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none focus:ring-2 focus:ring-blue-500/20 text-sm"
+              placeholder="Phone Number"
+              className="w-full p-3.5 border border-slate-200 rounded-xl outline-none text-sm"
               value={formData.phone}
               onChange={(e) =>
                 setFormData({ ...formData, phone: e.target.value })
@@ -176,28 +199,23 @@ export default function LoginPage() {
             <button
               type="button"
               onClick={() => setMode("login")}
-              className="text-center w-full text-xs font-bold text-slate-400 mt-2 hover:text-slate-600"
+              className="w-full text-xs font-bold text-slate-400"
             >
-              Back to Login
+              Back
             </button>
           </form>
         )}
 
-        {/* --- RESET PASSWORD FORM (Username + OTP + New Password) --- */}
-        {mode === "reset" && (
-          <form onSubmit={handleResetPassword} className="space-y-4">
-            <div className="bg-blue-50 p-3 rounded-lg text-center mb-2">
-              <p className="text-[10px] uppercase tracking-wider text-blue-600 font-bold">
-                Account: {formData.username}
-              </p>
-              <p className="text-sm font-bold text-slate-700">
-                {formData.phone}
-              </p>
-            </div>
+        {/* --- VERIFY OTP FORM (Step 2) --- */}
+        {mode === "verify" && (
+          <form onSubmit={handleVerifyOTP} className="space-y-4">
+            <p className="text-center text-xs text-slate-500">
+              OTP sent to {formData.phone}
+            </p>
             <input
               type="text"
               placeholder="6-Digit OTP"
-              className="w-full p-3.5 border border-slate-200 rounded-xl text-center text-lg font-bold tracking-[10px] outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full p-3.5 border border-slate-200 rounded-xl text-center text-lg font-bold tracking-[8px] outline-none"
               value={formData.otp}
               onChange={(e) =>
                 setFormData({ ...formData, otp: e.target.value })
@@ -205,10 +223,23 @@ export default function LoginPage() {
               maxLength={6}
               required
             />
+            <button
+              type="submit"
+              disabled={submitting}
+              className="w-full bg-blue-600 text-white p-3.5 rounded-xl font-bold text-xs uppercase"
+            >
+              {submitting ? "Verifying..." : "Verify OTP"}
+            </button>
+          </form>
+        )}
+
+        {/* --- FINAL RESET FORM (Step 3) --- */}
+        {mode === "final" && (
+          <form onSubmit={handleResetPassword} className="space-y-4">
             <input
               type="password"
               placeholder="New Password (min 6 chars)"
-              className="w-full p-3.5 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500/20"
+              className="w-full p-3.5 border border-slate-200 rounded-xl text-sm outline-none"
               value={formData.new_password}
               onChange={(e) =>
                 setFormData({ ...formData, new_password: e.target.value })
@@ -219,9 +250,9 @@ export default function LoginPage() {
             <button
               type="submit"
               disabled={submitting}
-              className="w-full bg-green-600 text-white p-3.5 rounded-xl font-bold text-xs uppercase tracking-widest hover:bg-green-700 disabled:bg-green-400"
+              className="w-full bg-green-600 text-white p-3.5 rounded-xl font-bold text-xs uppercase"
             >
-              {submitting ? "Resetting..." : "Reset Password"}
+              {submitting ? "Resetting..." : "Complete Reset"}
             </button>
           </form>
         )}

@@ -15,29 +15,45 @@ export default function CustomerSearch({
 
       {selectedCustomer ? (
         <div className="flex items-center justify-between bg-blue-50 p-3 rounded-2xl border border-blue-100">
-          <div>
+          <div className="flex flex-col">
             <span className="font-bold text-blue-700">
-              {selectedCustomer.username}
+              {/* মামা এখানে আমরা নাম বা ইউজারনেম যেটা পাই সেটা দেখাবো */}
+              {selectedCustomer.name ||
+                selectedCustomer.username ||
+                selectedCustomer.first_name ||
+                "New Customer"}
             </span>
+
+            {/* যদি ফোন নম্বর থাকে তবে ছোট করে নিচে দেখাবে */}
+            {selectedCustomer.phone && (
+              <span className="text-[10px] text-blue-500 font-bold">
+                {selectedCustomer.phone}
+              </span>
+            )}
+          </div>
+
+          <div className="flex items-center gap-3">
             <span
-              className={`ml-3 text-[10px] font-black px-2 py-1 rounded-lg ${
-                selectedCustomer.status === "active"
+              className={`text-[10px] font-black px-2 py-1 rounded-lg ${
+                selectedCustomer.status?.toLowerCase() === "active"
                   ? "bg-green-100 text-green-600"
                   : "bg-slate-200 text-slate-500"
               }`}
             >
-              {selectedCustomer.status?.toUpperCase()}
+              {/* যদি স্ট্যাটাস না থাকে তবে ডিফল্ট PENDING বা NEW দেখাবে */}
+              {(selectedCustomer.status || "NEW").toUpperCase()}
             </span>
+
+            <button
+              onClick={() => {
+                setSelectedCustomer(null);
+                setCustomerSearch("");
+              }}
+              className="text-rose-500 hover:scale-110 transition"
+            >
+              <XCircle size={20} />
+            </button>
           </div>
-          <button
-            onClick={() => {
-              setSelectedCustomer(null);
-              setCustomerSearch("");
-            }}
-            className="text-rose-500 hover:scale-110 transition"
-          >
-            <XCircle size={20} />
-          </button>
         </div>
       ) : (
         <input

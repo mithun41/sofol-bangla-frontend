@@ -21,9 +21,10 @@ import {
   Wallet,
   Package,
   Layers,
-  ShoppingCart, // ✅ POS এর জন্য আইকন
+  ShoppingCart,
   ChevronLeft,
   ChevronRight,
+  BanIcon,
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -120,7 +121,7 @@ export default function AdminLayout({ children }) {
         href: "/admin-dashboard/withdrawls",
         Icon: Wallet,
       },
-      { name: "Settings", href: "/admin-dashboard/settings", Icon: Settings },
+      { name: "Banner", href: "/admin-dashboard/banner", Icon: BanIcon },
     ],
     [],
   );

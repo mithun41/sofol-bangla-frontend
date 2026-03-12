@@ -73,10 +73,9 @@ export const authService = {
   // services/authService.js
 
   requestOTP: async ({ username, phone }) => {
-    // এখানে অবজেক্ট ডিস্ট্রাকচারিং করা হয়েছে
     try {
       const response = await axios.post(`${FULL_API_URL}forgot-password/`, {
-        username, // ব্যাকএন্ডের জন্য নতুন ফিল্ড
+        username,
         phone,
       });
       return response.data;
@@ -85,23 +84,32 @@ export const authService = {
     }
   },
 
-  resetPassword: async (resetData) => {
+  // ৯. ওটিপি ভেরিফিকেশন (ধাপ ২ - নতুন যোগ করা হয়েছে)
+  verifyOTP: async ({ username, phone, otp }) => {
     try {
-      const response = await axios.post(
-        "https://mithun41.pythonanywhere.com/api/accounts/reset-password/",
-        {
-          username: resetData.username, // এটিও মাস্ট লাগবে
-          phone: resetData.phone,
-          otp: resetData.otp,
-          new_password: resetData.new_password,
-        },
-      );
+      const response = await axios.post(`${FULL_API_URL}verify-otp/`, {
+        username,
+        phone,
+        otp,
+      });
+      return response.data;
+    } catch (error) {
+      throw error.response?.data || { message: "OTP Verification Failed" };
+    }
+  },
+
+  // ১০. ফাইনাল পাসওয়ার্ড রিসেট (ধাপ ৩)
+  resetPassword: async ({ username, new_password }) => {
+    try {
+      const response = await axios.post(`${FULL_API_URL}reset-password/`, {
+        username,
+        new_password,
+      });
       return response.data;
     } catch (error) {
       throw error.response?.data || { message: "Reset Failed" };
     }
   },
-
   logout: async () => {
     try {
       const refresh = localStorage.getItem("refresh_token");

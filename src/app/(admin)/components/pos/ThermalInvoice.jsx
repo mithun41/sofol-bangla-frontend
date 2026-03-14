@@ -4,7 +4,7 @@ const ThermalInvoice = React.forwardRef(
   ({ orderData, cart, customer, subtotal, formatBDT }, ref) => {
     if (!orderData) return null;
 
-    const vatPercent = 15; // তোর ভ্যাট পারসেন্টেজ
+    const vatPercent = 0; // তোর ভ্যাট পারসেন্টেজ
     const vatAmount = subtotal * (vatPercent / 100);
     const grandTotal = subtotal + vatAmount;
 

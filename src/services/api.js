@@ -1,11 +1,13 @@
 import axios from "axios";
 
 const api = axios.create({
-  baseURL: "https://mithun41.pythonanywhere.com/api/",
+  // এখন থেকে এই লিংকটা .env ফাইল থেকে অটোমেটিক আসবে
+  baseURL: process.env.NEXT_PUBLIC_API_BASE_URL,
 });
 
 api.interceptors.request.use((config) => {
-  const token = localStorage.getItem("access");
+  const token =
+    typeof window !== "undefined" ? localStorage.getItem("access") : null;
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;
   }

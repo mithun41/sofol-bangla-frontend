@@ -1,7 +1,8 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { ShoppingCart, ArrowRight, Loader2 } from "lucide-react";
+import { useRouter } from "next/navigation"; // রাউটিং এর জন্য
+import { ShoppingCart, ArrowRight, Loader2, Zap } from "lucide-react";
 import { getAllProducts } from "@/services/productService";
 import { useCart } from "@/context/CartContext";
 import { useAuth } from "@/context/AuthContext";
@@ -10,6 +11,7 @@ import toast, { Toaster } from "react-hot-toast";
 export default function NewArrivals() {
   const { user } = useAuth();
   const { addToCart } = useCart();
+  const router = useRouter();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
@@ -33,26 +35,30 @@ export default function NewArrivals() {
     loadData();
   }, []);
 
-  const handleAddToCart = (p) => {
+  const processCartItem = (p) => {
     const originalPrice = Number(p.price || 0);
     const pointValue = Number(p.point_value || 0);
-
     const discount = pointValue * 2;
     const finalPrice = isActiveMember
       ? originalPrice - discount
       : originalPrice;
 
-    const cartItem = {
+    return {
       ...p,
       price: finalPrice,
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
+  };
 
-    addToCart(cartItem);
-    toast.success(`${p.name} added to cart!`, {
-      position: "bottom-right",
-    });
+  const handleAddToCart = (p) => {
+    addToCart(processCartItem(p));
+    toast.success(`${p.name} added to cart!`, { position: "bottom-right" });
+  };
+
+  const handleOrderNow = (p) => {
+    addToCart(processCartItem(p));
+    router.push("/checkout");
   };
 
   if (loading)
@@ -96,7 +102,6 @@ export default function NewArrivals() {
         {products.map((p) => {
           const pointVal = Number(p.point_value || 0);
           const originalPrice = Number(p.price || 0);
-
           const discount = pointVal * 2;
           const displayPrice = isActiveMember
             ? originalPrice - discount
@@ -123,25 +128,25 @@ export default function NewArrivals() {
                   />
                 </Link>
 
-                {/* Desktop Add */}
+                {/* Desktop Add to Cart (Hover) */}
                 <button
                   onClick={() => handleAddToCart(p)}
-                  className="absolute bottom-0 left-0 right-0 bg-[#FF620A] text-white py-3 font-bold text-[11px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-[#e65a08]"
+                  className="absolute bottom-0 left-0 right-0 bg-slate-800 text-white py-3 font-bold text-[11px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-black"
                 >
-                  Quick Add +
+                  <ShoppingCart size={14} /> Add to Cart
                 </button>
 
-                {/* Mobile Add */}
+                {/* Mobile Add to Cart (Fixed Icon) */}
                 <button
                   onClick={() => handleAddToCart(p)}
-                  className="md:hidden absolute bottom-2 right-2 bg-[#FF620A] p-2 rounded-full shadow-md active:scale-90 z-10"
+                  className="md:hidden absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-md active:scale-90 z-10 border border-slate-100"
                 >
-                  <ShoppingCart size={14} className="text-white" />
+                  <ShoppingCart size={14} className="text-[#FF620A]" />
                 </button>
               </div>
 
               {/* Product Info */}
-              <div className="flex flex-col text-left space-y-1">
+              <div className="flex flex-col text-left space-y-1 px-1">
                 <Link href={`/shop/${p.id}`}>
                   <h3 className="text-[14px] font-semibold text-slate-800 line-clamp-1 hover:text-[#FF620A] transition-colors">
                     {p.name}
@@ -149,25 +154,23 @@ export default function NewArrivals() {
                 </Link>
 
                 <div className="flex items-center flex-wrap gap-x-2">
-                  {/* Price */}
                   <span className="text-[#FF620A] font-bold text-sm">
                     Tk {Math.floor(displayPrice).toLocaleString()}
                   </span>
-
-                  {/* Old Price */}
-                  {isActiveMember && discount > 0 ? (
+                  {isActiveMember && discount > 0 && (
                     <span className="text-slate-400 text-[11px] line-through">
                       Tk {originalPrice.toLocaleString()}
                     </span>
-                  ) : (
-                    !isActiveMember &&
-                    pointVal > 0 && (
-                      <span className="text-slate-400 text-[11px]">
-                        (Original Price)
-                      </span>
-                    )
                   )}
                 </div>
+
+                {/* Order Now Button (Fixed below price) */}
+                <button
+                  onClick={() => handleOrderNow(p)}
+                  className="w-full mt-2 bg-[#FF620A] text-white py-2 rounded-lg font-bold text-[12px] flex items-center justify-center gap-1.5 hover:bg-[#e65a08] active:scale-95 transition-all shadow-sm"
+                >
+                  <Zap size={13} fill="white" /> Order Now
+                </button>
               </div>
             </div>
           );

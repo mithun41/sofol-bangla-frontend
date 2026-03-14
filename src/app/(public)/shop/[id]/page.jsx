@@ -62,7 +62,7 @@ export default function ProductDetails() {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">
         <Loader2 className="animate-spin text-[#FF620A] mb-4" size={40} />
-        <p className="text-slate-500 font-medium">পণ্য লোড হচ্ছে...</p>
+        <p className="text-slate-500 font-medium">Product is loading</p>
       </div>
     );
 

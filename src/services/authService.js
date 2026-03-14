@@ -2,7 +2,7 @@ import api from "./api";
 import axios from "axios";
 
 // আপনার মেইন প্রজেক্টের URL স্ট্রাকচার অনুযায়ী বেস ইউআরএল
-const FULL_API_URL = "https://mithun41.pythonanywhere.com/api/accounts/";
+const FULL_API_URL = `${process.env.NEXT_PUBLIC_API_BASE_URL}accounts/`;
 
 export const authService = {
   // ১. ইউজার রেজিস্ট্রেশন

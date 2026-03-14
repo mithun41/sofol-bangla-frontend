@@ -34,7 +34,7 @@ export const CartProvider = ({ children }) => {
     setLoading(true);
     try {
       const res = await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/cart/",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/`,
         {
           headers: { Authorization: `Bearer ${token}` },
         },
@@ -68,7 +68,7 @@ export const CartProvider = ({ children }) => {
     try {
       const ids = currentCart.map((item) => item.id);
       const response = await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/sync-cart/",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}products/sync-cart/`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
@@ -105,7 +105,7 @@ export const CartProvider = ({ children }) => {
 
     if (token) {
       try {
-        await fetch("https://mithun41.pythonanywhere.com/api/products/cart/", {
+        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/`, {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
@@ -166,7 +166,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/${cartItemId}/`,
           {
             method: "PATCH",
             headers: {
@@ -199,7 +199,7 @@ export const CartProvider = ({ children }) => {
     if (token && cartItemId) {
       try {
         await fetch(
-          `https://mithun41.pythonanywhere.com/api/products/cart/${cartItemId}/`,
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/${cartItemId}/`,
           {
             method: "DELETE",
             headers: { Authorization: `Bearer ${token}` },
@@ -223,7 +223,7 @@ export const CartProvider = ({ children }) => {
     const token = getAuthToken();
     if (token) {
       await fetch(
-        "https://mithun41.pythonanywhere.com/api/products/cart/clear/",
+        `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/clear/`,
         {
           method: "DELETE",
           headers: { Authorization: `Bearer ${token}` },

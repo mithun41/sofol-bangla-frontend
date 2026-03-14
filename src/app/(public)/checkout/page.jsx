@@ -302,9 +302,13 @@ export default function CheckoutPage() {
               {paymentMethod !== "cod" && (
                 <div className="p-6 bg-slate-900 rounded-2xl text-white space-y-4">
                   <p className="text-sm text-slate-300">
-                    Send Money to (Personal):{" "}
-                    <span className="font-bold text-[#FF620A]">
-                      01700-000000
+                    Send Money to (Bkash):
+                    <span className="font-bold text-[#FF620A] mx-1">
+                      01631-072225
+                    </span>
+                    Or Nagad:
+                    <span className="font-bold text-[#FF620A] mx-1">
+                      01710-855197
                     </span>
                   </p>
 

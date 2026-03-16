@@ -728,13 +728,6 @@ export default function AdminOrdersPage() {
                     </div>
 
                     <div className="flex items-center justify-between text-sm">
-                      <span className="text-slate-500">Shipping</span>
-                      <span className="font-semibold text-slate-800">
-                        ৳{Number(selectedOrder.shipping_cost).toLocaleString()}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between text-sm">
                       <span className="text-slate-500">Courier</span>
                       <span className="font-semibold text-slate-800">
                         Sundarban Courier

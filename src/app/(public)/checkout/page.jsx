@@ -65,8 +65,7 @@ export default function CheckoutPage() {
     return acc + displayPV * item.quantity;
   }, 0);
 
-  const shipping = formData.city === "Dhaka" ? 100 : 150;
-  const total = subtotal + shipping;
+  const total = subtotal;
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -213,20 +212,6 @@ export default function CheckoutPage() {
                   />
                 </div>
 
-                <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-600">
-                    District / City
-                  </label>
-                  <select
-                    name="city"
-                    value={formData.city}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition"
-                  >
-                    <option value="Dhaka">Inside Dhaka (৳100)</option>
-                    <option value="Outside">Outside Dhaka (৳150)</option>
-                  </select>
-                </div>
                 <div className="space-y-2 md:col-span-2">
                   <label className="text-sm font-bold text-slate-600">
                     Select Courier Service
@@ -406,16 +391,6 @@ export default function CheckoutPage() {
                     </p>
                   </div>
                 )}
-
-                <div className="flex justify-between text-slate-500 font-medium">
-                  <span>Subtotal</span>
-                  <span>৳{subtotal}</span>
-                </div>
-
-                <div className="flex justify-between text-slate-500 font-medium">
-                  <span>Shipping</span>
-                  <span>৳{shipping}</span>
-                </div>
 
                 <div className="flex justify-between items-center pt-3 text-slate-900 border-t border-slate-100">
                   <span className="text-lg font-bold">Total Amount</span>

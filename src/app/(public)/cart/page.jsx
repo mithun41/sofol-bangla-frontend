@@ -39,8 +39,7 @@ export default function CartPage() {
     return acc + displayPV * item.quantity;
   }, 0);
 
-  const shippingNote =
-    subtotal > 0 ? "Shipping will be calculated at checkout." : "";
+  const shippingNote = subtotal > 0 ? "Shipping charges are applicable." : "";
 
   if (!cart.length) {
     return (

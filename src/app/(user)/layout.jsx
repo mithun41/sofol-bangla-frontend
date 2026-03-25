@@ -60,10 +60,10 @@ export default function UserLayout({ children }) {
     { name: "Dashboard", href: "/dashboard", icon: Home },
     { name: "Profile", href: "/dashboard/profile", icon: User },
     { name: "My Tree", href: "/dashboard/my-tree", icon: TrendingUp },
+    { name: "My Network", href: "/dashboard/my-network", icon: TrendingUp },
     { name: "Withdraw", href: "/dashboard/withdraw", icon: Wallet },
     { name: "Bonus Logs", href: "/dashboard/bonus-logs", icon: Users },
     { name: "My Orders", href: "/dashboard/user-order", icon: Bell },
-    { name: "Settings", href: "/dashboard/settings", icon: Settings },
   ];
 
   return (

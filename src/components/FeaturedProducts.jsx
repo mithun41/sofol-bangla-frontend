@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // রাউটিং এর জন্য
+import { useRouter } from "next/navigation";
 import { ShoppingCart, ArrowRight, Loader2, Star, Zap } from "lucide-react";
 import { getAllProducts } from "@/services/productService";
 import { useCart } from "@/context/CartContext";
@@ -15,15 +15,14 @@ export default function FeaturedProducts() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const isActiveMember = user?.status === "active";
+  // ইউজার স্ট্যাটাস চেক (Case-insensitive)
+  const isActiveMember = user?.status?.toLowerCase() === "active" || user?.profile?.status?.toLowerCase() === "active";
 
   useEffect(() => {
     const loadData = async () => {
       try {
         const res = await getAllProducts();
-        const allProducts = Array.isArray(res.data)
-          ? res.data
-          : res.data.results;
+        const allProducts = Array.isArray(res.data) ? res.data : res.data.results;
 
         const featured = (allProducts || [])
           .filter((p) => p.is_featured === true)
@@ -39,18 +38,16 @@ export default function FeaturedProducts() {
     loadData();
   }, []);
 
-  // কমন আইটেম প্রসেসিং ফাংশন
+  // ২. কমন আইটেম প্রসেসিং (Double Discount Fix)
   const processCartItem = (p) => {
-    const originalPrice = Number(p.price || 0);
+    // ব্যাকএন্ড থেকে আসা দামটাই ফাইনাল প্রাইস
+    const finalPrice = Number(p.price || 0);
     const pointValue = Number(p.point_value || 0);
-    const discount = pointValue * 2;
-    const finalPrice = isActiveMember
-      ? originalPrice - discount
-      : originalPrice;
 
     return {
       ...p,
       price: finalPrice,
+      // একটিভ মেম্বার হলে পিভি ০ হবে (তোর রিকোয়ারমেন্ট অনুযায়ী)
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
@@ -111,11 +108,11 @@ export default function FeaturedProducts() {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
         {products.map((p) => {
           const pointVal = Number(p.point_value || 0);
-          const originalPrice = Number(p.price || 0);
-          const discount = pointVal * 2;
-          const displayPrice = isActiveMember
-            ? originalPrice - discount
-            : originalPrice;
+          const displayPrice = Number(p.price || 0); // ব্যাকএন্ড থেকে আসা দাম
+          const discountAmount = pointVal * 2;
+          
+          // যদি ইউজার একটিভ হয়, তবে অরিজিনাল দাম হবে displayPrice + discount
+          const originalPrice = isActiveMember ? (displayPrice + discountAmount) : displayPrice;
 
           return (
             <div key={p.id} className="group flex flex-col">
@@ -123,9 +120,16 @@ export default function FeaturedProducts() {
               <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] mb-3 border border-transparent group-hover:border-[#FF620A]/40 transition-all">
                 {pointVal > 0 && (
                   <div className="absolute top-2 left-2 z-10">
-                    <span className="bg-[#FF620A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                      {isActiveMember ? `৳${discount} OFF` : `+${pointVal} PV`}
-                    </span>
+                    {isActiveMember ? (
+                      <span className="bg-[#007A55] text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1">
+                        <Zap size={10} fill="white" className="animate-pulse" />
+                        ৳{discountAmount} OFF
+                      </span>
+                    ) : (
+                      <span className="bg-[#FF620A] text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1">
+                        <Star size={10} fill="white" />+{pointVal} PV
+                      </span>
+                    )}
                   </div>
                 )}
 
@@ -137,7 +141,6 @@ export default function FeaturedProducts() {
                   />
                 </Link>
 
-                {/* Desktop Add to Cart (Hover) */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="absolute bottom-0 left-0 right-0 bg-slate-900/90 text-white py-3 font-bold text-[11px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-black"
@@ -145,7 +148,6 @@ export default function FeaturedProducts() {
                   <ShoppingCart size={14} /> Add to Cart
                 </button>
 
-                {/* Mobile Add to Cart (Fixed Icon) */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="md:hidden absolute bottom-2 right-2 bg-white/90 backdrop-blur-sm p-2 rounded-full shadow-md active:scale-90 z-10 border border-slate-200"
@@ -163,17 +165,16 @@ export default function FeaturedProducts() {
                 </Link>
 
                 <div className="flex items-center flex-wrap gap-x-2">
-                  <span className="text-[#FF620A] font-bold text-sm">
+                  <span className="text-[#007A55] font-bold text-sm">
                     Tk {Math.floor(displayPrice).toLocaleString()}
                   </span>
-                  {isActiveMember && discount > 0 && (
+                  {isActiveMember && discountAmount > 0 && (
                     <span className="text-slate-400 text-[11px] line-through">
-                      Tk {originalPrice.toLocaleString()}
+                      Tk {Math.floor(originalPrice).toLocaleString()}
                     </span>
                   )}
                 </div>
 
-                {/* Order Now Button (Fixed below price) */}
                 <button
                   onClick={() => handleOrderNow(p)}
                   className="w-full mt-2 bg-[#FF620A] text-white py-2.5 rounded-lg font-bold text-[12px] flex items-center justify-center gap-1.5 hover:bg-[#e65a08] active:scale-95 transition-all shadow-sm"

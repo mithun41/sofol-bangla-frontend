@@ -1,7 +1,7 @@
 "use client";
 import React, { useEffect, useState } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation"; // রাউটিং এর জন্য
+import { useRouter } from "next/navigation";
 import { ShoppingCart, ArrowRight, Loader2, Zap } from "lucide-react";
 import { getAllProducts } from "@/services/productService";
 import { useCart } from "@/context/CartContext";
@@ -15,7 +15,8 @@ export default function NewArrivals() {
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
 
-  const isActiveMember = user?.status === "active";
+  // ইউজার স্ট্যাটাস চেক (Case-insensitive)
+  const isActiveMember = user?.status?.toLowerCase() === "active" || user?.profile?.status?.toLowerCase() === "active";
 
   useEffect(() => {
     const loadData = async () => {
@@ -25,6 +26,7 @@ export default function NewArrivals() {
           ? res.data
           : res.data.results;
 
+        // লেটেস্ট ৬টা প্রোডাক্ট নেওয়া
         setProducts((allProducts || []).slice(0, 6));
       } catch (err) {
         console.error("Data loading failed", err);
@@ -35,17 +37,15 @@ export default function NewArrivals() {
     loadData();
   }, []);
 
+  // ডাবল ডিসকাউন্ট ফিক্স করার জন্য প্রসেস ফাংশন
   const processCartItem = (p) => {
-    const originalPrice = Number(p.price || 0);
+    const finalPrice = Number(p.price || 0); // ব্যাকএন্ড থেকে আসা ডিসকাউন্টেড প্রাইস
     const pointValue = Number(p.point_value || 0);
-    const discount = pointValue * 2;
-    const finalPrice = isActiveMember
-      ? originalPrice - discount
-      : originalPrice;
 
     return {
       ...p,
       price: finalPrice,
+      // একটিভ মেম্বার হলে পিভি ০ হবে (তোর বিজনেস লজিক অনুযায়ী)
       point_value: isActiveMember ? 0 : pointValue,
       quantity: 1,
     };
@@ -101,11 +101,11 @@ export default function NewArrivals() {
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
         {products.map((p) => {
           const pointVal = Number(p.point_value || 0);
-          const originalPrice = Number(p.price || 0);
-          const discount = pointVal * 2;
-          const displayPrice = isActiveMember
-            ? originalPrice - discount
-            : originalPrice;
+          const displayPrice = Number(p.price || 0); // ব্যাকএন্ড থেকে আসা দাম
+          const discountAmount = pointVal * 2;
+          
+          // যদি মেম্বার একটিভ হয়, তবে আসল দাম হবে displayPrice + discount
+          const originalPrice = isActiveMember ? (displayPrice + discountAmount) : displayPrice;
 
           return (
             <div key={p.id} className="group flex flex-col">
@@ -114,8 +114,9 @@ export default function NewArrivals() {
                 {/* Badge */}
                 {pointVal > 0 && (
                   <div className="absolute top-2 left-2 z-10">
-                    <span className="bg-[#FF620A] text-white text-[10px] font-bold px-1.5 py-0.5 rounded shadow-sm">
-                      {isActiveMember ? `৳${discount} OFF` : `+${pointVal} PV`}
+                    <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1 ${isActiveMember ? 'bg-[#007A55]' : 'bg-[#FF620A]'}`}>
+                       {isActiveMember ? <Zap size={10} fill="white" className="animate-pulse" /> : null}
+                       {isActiveMember ? `৳${discountAmount} OFF` : `+${pointVal} PV`}
                     </span>
                   </div>
                 )}
@@ -128,7 +129,6 @@ export default function NewArrivals() {
                   />
                 </Link>
 
-                {/* Desktop Add to Cart (Hover) */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="absolute bottom-0 left-0 right-0 bg-slate-800 text-white py-3 font-bold text-[11px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-black"
@@ -136,7 +136,6 @@ export default function NewArrivals() {
                   <ShoppingCart size={14} /> Add to Cart
                 </button>
 
-                {/* Mobile Add to Cart (Fixed Icon) */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="md:hidden absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-md active:scale-90 z-10 border border-slate-100"
@@ -154,17 +153,16 @@ export default function NewArrivals() {
                 </Link>
 
                 <div className="flex items-center flex-wrap gap-x-2">
-                  <span className="text-[#FF620A] font-bold text-sm">
+                  <span className="text-[#007A55] font-bold text-sm">
                     Tk {Math.floor(displayPrice).toLocaleString()}
                   </span>
-                  {isActiveMember && discount > 0 && (
+                  {isActiveMember && discountAmount > 0 && (
                     <span className="text-slate-400 text-[11px] line-through">
-                      Tk {originalPrice.toLocaleString()}
+                      Tk {Math.floor(originalPrice).toLocaleString()}
                     </span>
                   )}
                 </div>
 
-                {/* Order Now Button (Fixed below price) */}
                 <button
                   onClick={() => handleOrderNow(p)}
                   className="w-full mt-2 bg-[#FF620A] text-white py-2 rounded-lg font-bold text-[12px] flex items-center justify-center gap-1.5 hover:bg-[#e65a08] active:scale-95 transition-all shadow-sm"

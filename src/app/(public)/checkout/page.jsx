@@ -97,7 +97,7 @@ export default function CheckoutPage() {
         };
       }),
       subtotal: subtotal,
-      shipping_cost: shipping,
+      // ❌ shipping_cost সরিয়ে ফেলা হয়েছে
       total_amount: total,
       payment_method: paymentMethod,
       sender_number: paymentMethod === "cod" ? "" : formData.senderNumber,
@@ -123,6 +123,7 @@ export default function CheckoutPage() {
       setOrderLoading(false);
     }
   };
+
   if (loading) {
     return (
       <div className="min-h-screen flex flex-col items-center justify-center bg-white">

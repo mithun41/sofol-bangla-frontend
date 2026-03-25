@@ -14,9 +14,7 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
   const discount = Number(product.point_value || 0) * 2;
 
   // ৩. ফাইনাল দাম নির্ধারণ (একটিভ মেম্বার হলে ডিসকাউন্ট হবে)
-  const finalPrice = isActiveMember
-    ? Math.max(0, Number(product.price || 0) - discount)
-    : Number(product.price || 0);
+  const finalPrice = Number(product.price || 0);
 
   const outOfStock = Number(product.stock || 0) <= 0;
 
@@ -90,7 +88,7 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
               {/* অফার প্রাইস থাকলে আগের প্রাইস কাটা (line-through) দেখাবে */}
               {isActiveMember && discount > 0 && (
                 <p className="text-[11px] text-slate-400 line-through mt-0.5">
-                  ৳{Math.floor(product.price).toLocaleString()}
+                  ৳{Math.floor(product.original_price).toLocaleString()}
                 </p>
               )}
 

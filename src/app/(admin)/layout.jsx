@@ -109,6 +109,7 @@ export default function AdminLayout({ children }) {
         Icon: Package,
       },
       { name: "Manage Orders", href: "/admin-dashboard/orders", Icon: Package },
+      { name: "Income Reports", href: "/admin-dashboard/income-report", Icon: Package },
       { name: "Categories", href: "/admin-dashboard/categories", Icon: Layers },
       {
         name: "Binary Tree",

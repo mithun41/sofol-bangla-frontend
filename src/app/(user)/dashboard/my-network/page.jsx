@@ -25,7 +25,7 @@ const MyNetwork = () => {
   useEffect(() => {
     const fetchNetworkData = async () => {
       try {
-        const res = await api.get("/accounts/my-network/");
+        const res = await api.get("accounts/my-network/");
         setNetwork(res.data);
       } catch (err) {
         console.error("Failed to load network data", err);

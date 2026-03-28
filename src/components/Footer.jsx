@@ -177,7 +177,8 @@ export default function Footer() {
       <div className="border-t border-slate-800 bg-[#0a0f1d]">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-xs text-slate-500 tracking-wide text-center md:text-left">
-            © {currentYear} Sofol Bangla Ltd. All rights reserved.
+            © {currentYear} Sofol Bangla Ltd. All rights reserved. v-1.1
+            (Updated Today)
           </p>
 
           {/* Payment */}

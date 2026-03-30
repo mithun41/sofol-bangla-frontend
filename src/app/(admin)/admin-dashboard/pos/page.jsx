@@ -2,9 +2,9 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useCart } from "@/context/CartContext";
-import { toast, Toaster } from "react-hot-toast"; // Toaster অ্যাড করলাম
+import { toast, Toaster } from "react-hot-toast";
 import api from "@/services/api";
-import { useReactToPrint } from "react-to-print"; // ইম্পোর্ট নিশ্চিত কর
+import { useReactToPrint } from "react-to-print";
 
 import CustomerSearch from "../../components/pos/CustomerSearch";
 import ProductScanner from "../../components/pos/ProductScanner";
@@ -12,7 +12,9 @@ import CartTable from "../../components/pos/CartTable";
 import OrderSummary from "../../components/pos/OrderSummary";
 import QuickRegister from "../../components/pos/QuickRegister";
 import ThermalInvoice from "../../components/pos/ThermalInvoice";
+import Swal from "sweetalert2";
 
+// ─── Formatter ────────────────────────────────────────────────────────────────
 const formatBDT = (value) => {
   const n = Number(value || 0);
   return `৳${n.toFixed(2).replace(/\.00$/, "")}`;
@@ -34,19 +36,69 @@ export default function POSPage() {
   const [selectedCustomer, setSelectedCustomer] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // প্রিন্ট স্টেট
+  // Print state
   const [lastOrder, setLastOrder] = useState(null);
   const [printCart, setPrintCart] = useState([]);
   const invoiceRef = useRef();
-
   const barcodeRef = useRef(null);
   const beepRef = useRef(null);
 
-  // প্রিন্ট কনফিগারেশন
-  const handlePrint = useReactToPrint({
-    contentRef: invoiceRef, // latest version অনুযায়ী contentRef ব্যবহার করা ভালো
-  });
+  const handlePrint = useReactToPrint({ contentRef: invoiceRef });
+// ── ফোকাস লজিক: রেজিস্ট্রেশন বা সার্চের সময় ডিস্টার্ব করবে না ──────────────────
+useEffect(() => {
+  const handleGlobalClick = (e) => {
+    const active = document.activeElement;
+    
+    // ১. যদি বর্তমানে কোনো ইনপুট ফিল্ড অলরেডি ফোকাসড থাকে, তবে আমরা কিছুই করব না
+    const isAlreadyTyping = 
+      active.tagName === "INPUT" || 
+      active.tagName === "TEXTAREA" || 
+      active.tagName === "SELECT" ||
+      active.isContentEditable;
 
+    if (isAlreadyTyping) return; // টাইপ করা অবস্থায় ফোকাস কাড়বে না
+
+    // ২. ক্লিক করা এলিমেন্টটি চেক করা
+    const clickedElement = e.target;
+    const isInteractive = 
+      clickedElement.tagName === "INPUT" || 
+      clickedElement.tagName === "TEXTAREA" || 
+      clickedElement.tagName === "SELECT" ||
+      clickedElement.closest('button') ||
+      clickedElement.closest('.customer-dropdown') ||
+      clickedElement.closest('.swal2-container'); // SweetAlert খোলা থাকলে ডিস্টার্ব করবে না
+
+    // ৩. যদি একদম ফাঁকা জায়গায় ক্লিক হয়, শুধু তখনই স্ক্যানারে যাবে
+    if (!isInteractive) {
+      setTimeout(() => {
+        // পুনরায় চেক করা যেন এর মধ্যে ইউজার অন্য কোথাও ক্লিক না করে ফেলে
+        if (document.activeElement.tagName === 'BODY' || document.activeElement.tagName === 'DIV') {
+          barcodeRef.current?.focus();
+        }
+      }, 50);
+    }
+  };
+
+  // ৪. ফোকাস আউট হয়ে গেলে যেন হারিয়ে না যায় (স্মার্ট রিটার্ন)
+  const handleBlurLogic = (e) => {
+    // যদি ট্যাব বা অন্য কারণে ফোকাস চলে যায়, তবে ৩৫০ms পর স্ক্যানারে ফিরবে
+    // কিন্তু যদি ইউজার অন্য কোনো ইনপুটে যায়, তবে ফিরবে না
+    setTimeout(() => {
+      const active = document.activeElement;
+      if (!active || active.tagName === "BODY") {
+        barcodeRef.current?.focus();
+      }
+    }, 350);
+  };
+
+  window.addEventListener("mouseup", handleGlobalClick);
+  // ইনপুট ফিল্ডের ভেতরে টাইপিং এর সময় এই ইভেন্ট যেন ডিস্টার্ব না করে তাই 
+  // focusout এর বদলে আমরা শুধু mouseup দিয়ে ফাঁকা জায়গা ট্র্যাক করছি
+  
+  return () => {
+    window.removeEventListener("mouseup", handleGlobalClick);
+  };
+}, []);
   const getEffectivePrice = (item) => {
     const basePrice = parseFloat(item.price || 0);
     const pv = parseFloat(item.point_value || 0);
@@ -61,6 +113,7 @@ export default function POSPage() {
     );
   }, [cart, selectedCustomer]);
 
+  // ── Customer search ───────────────────────────────────────────────────────
   useEffect(() => {
     if (customerSearch.length < 2) {
       setCustomers([]);
@@ -79,6 +132,7 @@ export default function POSPage() {
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
+  // ── Product search ────────────────────────────────────────────────────────
   useEffect(() => {
     const q = searchQuery.trim();
     if (q.length < 2) {
@@ -103,57 +157,92 @@ export default function POSPage() {
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
+  // ── Barcode scan handler ──────────────────────────────────────────────────
   const handleScan = async (e) => {
     e.preventDefault();
     const code = barcode.trim();
     if (!code || scanLoading) return;
+
     setScanLoading(true);
     try {
-      const res = await api.get(`products/get_by_barcode/?code=${code}`);
-      addToCart(res.data);
-      playBeep();
-      setBarcode("");
+      const res = await api.get(`pos/products/search/?q=${code}`);
+      const product = Array.isArray(res.data) ? res.data[0] : res.data;
+
+      if (product) {
+        addToCart(product);
+        playBeep();
+        setBarcode("");
+        toast.success(`${product.name} added!`, {
+          duration: 1000,
+          position: "bottom-center",
+        });
+      } else {
+        toast.error("Product not found!");
+        setBarcode("");
+      }
     } catch (err) {
-      toast.error("Product not found!"); // Updated
+      toast.error("Scan failed!");
       setBarcode("");
     } finally {
       setScanLoading(false);
+      setTimeout(() => {
+        barcodeRef.current?.focus();
+      }, 500);
     }
   };
-
-  // src/app/(admin)/admin-dashboard/pos/page.jsx
-
+  // ── Quick register success handler ────────────────────────────────────────
   const handleQuickRegisterSuccess = (res) => {
-    console.log("Received Response:", res);
-
-    // মামা, এখানে user_info (underscore সহ) অ্যাড করে দিলাম
     const userData =
       res?.user_info || res?.userinfo || res?.user || res?.data || res;
 
-    // চেক করছি userData এর ভেতর প্রয়োজনীয় প্রপার্টি আছে কি না
-    if (userData && (userData.username || userData.id || userData.name)) {
+    if (userData && (userData.id || userData.username)) {
       setSelectedCustomer(userData);
       setCustomerSearch("");
       setCustomers([]);
 
-      const displayName = userData.name || userData.username || "Customer";
-      toast.success(`${displayName} registered and selected!`);
+      const name = userData.name || userData.username || "Customer";
+      toast.success(`${name} registered and selected!`);
+
+      setTimeout(() => barcodeRef.current?.focus(), 100);
     } else {
-      console.error("Invalid user data structure:", res);
-      toast.error("Registration successful! Please search to select.");
+      console.error("User data structure mismatch:", res);
+      toast.error(
+        "Registration done, but could not auto-select. Please search manually.",
+      );
     }
   };
+
+  // ── Checkout + print logic ────────────────────────────────────────────────
   const handleCheckout = async () => {
     if (cart.length === 0) {
-      toast.error("Cart is empty!"); // Updated
+      toast.error("Cart is empty!");
       return;
     }
     if (!selectedCustomer) {
-      toast.error("Please select a customer!"); // Updated
+      toast.error("Please select a customer!");
       return;
     }
 
-    if (!window.confirm("Are you sure you want to complete this sale?")) return; // Updated
+    // --- SweetAlert2 Confirmation ---
+    const result = await Swal.fire({
+      title: "Confirm Order?",
+      text: `Total Amount: ${formatBDT(dynamicSubtotal)}`,
+      icon: "question",
+      showCancelButton: true,
+      confirmButtonColor: "#0f172a", // আপনার স্লেট-৯০০ থিমের সাথে মিল রেখে
+      cancelButtonColor: "#f43f5e",
+      confirmButtonText: "Yes, Place Order!",
+      cancelButtonText: "Cancel",
+      background: "#ffffff",
+      borderRadius: "1.25rem",
+      customClass: {
+        popup: "rounded-3xl",
+        confirmButton: "rounded-xl px-6 py-3 font-bold",
+        cancelButton: "rounded-xl px-6 py-3 font-bold",
+      },
+    });
+
+    if (!result.isConfirmed) return;
 
     const orderData = {
       customer_id: selectedCustomer.id,
@@ -168,24 +257,42 @@ export default function POSPage() {
     setIsSubmitting(true);
     try {
       const res = await api.post("pos/order/create/", orderData);
+
       setLastOrder(res.data);
       setPrintCart([...cart]);
-      toast.success("Order completed successfully!"); // Updated
 
-      setTimeout(() => {
-        handlePrint();
+      // অর্ডার সাকসেস মেসেজটাও SweetAlert দিয়ে দিতে পারেন (ঐচ্ছিক)
+      Swal.fire({
+        title: "Success!",
+        text: "Order has been placed successfully.",
+        icon: "success",
+        timer: 2000,
+        showConfirmButton: false,
+      });
+
+      setTimeout(async () => {
+        await handlePrint();
         clearCart();
         setSelectedCustomer(null);
-      }, 500);
+        setBarcode("");
+        barcodeRef.current?.focus();
+      }, 1000);
     } catch (err) {
-      toast.error(
-        err.response?.data?.error || "Failed to complete order!", // Updated
-      );
+      const errorMsg = err.response?.data?.error || "Order failed!";
+      toast.error(errorMsg);
+
+      Swal.fire({
+        title: "Failed!",
+        text: errorMsg,
+        icon: "error",
+        confirmButtonColor: "#0f172a",
+      });
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── Init ──────────────────────────────────────────────────────────────────
   useEffect(() => {
     beepRef.current = new Audio(
       "https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3",
@@ -195,11 +302,39 @@ export default function POSPage() {
 
   const playBeep = () => beepRef.current?.play().catch(() => {});
 
+  // ─────────────────────────────────────────────────────────────────────────
   return (
-    <div className="min-h-screen bg-[#f8fafc] p-4 lg:p-8 font-sans text-slate-900">
-      <Toaster position="top-right" /> {/* ✅ টোস্ট কাজ না করলে এটা মাস্ট */}
-      <div className="max-w-[1600px] mx-auto grid grid-cols-12 gap-8">
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-6">
+    <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
+      <Toaster position="top-right" reverseOrder={false} />
+
+      {/* ── Page Header ── */}
+      <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 z-40">
+        <div className="flex items-center gap-3">
+          <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center">
+            <span className="text-white text-xs font-black">SB</span>
+          </div>
+          <div>
+            <h1 className="font-black text-slate-900 text-sm leading-tight tracking-tight">
+              Sofol Bangla Shop
+            </h1>
+            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">
+              Point of Sale
+            </p>
+          </div>
+        </div>
+
+        {/* Live date/time indicator */}
+        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-400">
+          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          Terminal Active
+        </div>
+      </header>
+
+      {/* ── Main Grid ── */}
+      <main className="max-w-[1600px] mx-auto p-6 lg:p-8 grid grid-cols-12 gap-6">
+        {/* ── Left Column ── */}
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-5">
+          {/* Top row: Customer + Scanner */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CustomerSearch
               selectedCustomer={selectedCustomer}
@@ -225,10 +360,12 @@ export default function POSPage() {
             />
           </div>
 
+          {/* Quick Register — shown only when no customer selected */}
           {!selectedCustomer && (
             <QuickRegister onRegisterSuccess={handleQuickRegisterSuccess} />
           )}
 
+          {/* Cart */}
           <CartTable
             cart={cart}
             getEffectivePrice={getEffectivePrice}
@@ -240,6 +377,7 @@ export default function POSPage() {
           />
         </div>
 
+        {/* ── Right Column ── */}
         <div className="col-span-12 lg:col-span-4">
           <OrderSummary
             selectedCustomer={selectedCustomer}
@@ -250,18 +388,20 @@ export default function POSPage() {
             cartLength={cart.length}
           />
         </div>
-      </div>
-      {/* ✅ হিডেন ইনভয়েস কম্পোনেন্ট */}
-      <div className="hidden">
-        <ThermalInvoice
-          ref={invoiceRef}
-          orderData={lastOrder}
-          cart={printCart}
-          customer={selectedCustomer}
-          subtotal={dynamicSubtotal}
-          formatBDT={formatBDT}
-          getEffectivePrice={getEffectivePrice}
-        />
+      </main>
+
+      {/* ── Hidden Thermal Invoice (for printing) ── */}
+      <div style={{ display: "none" }}>
+        <div ref={invoiceRef}>
+          <ThermalInvoice
+            orderData={lastOrder}
+            cart={printCart}
+            customer={selectedCustomer}
+            subtotal={dynamicSubtotal}
+            formatBDT={formatBDT}
+            getEffectivePrice={getEffectivePrice}
+          />
+        </div>
       </div>
     </div>
   );

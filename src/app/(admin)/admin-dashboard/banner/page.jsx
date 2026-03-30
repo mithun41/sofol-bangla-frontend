@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import { banner } from "@/services/banner";
+import toast from "react-hot-toast";
 
 export default function AdminBanners() {
   const [banners, setBanners] = useState([]);
@@ -50,7 +51,7 @@ export default function AdminBanners() {
       closeModal();
       loadBanners();
     } catch (err) {
-      alert("Error saving banner");
+      toast("Error saving banner");
     }
   };
 

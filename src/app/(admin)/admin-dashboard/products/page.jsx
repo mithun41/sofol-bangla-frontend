@@ -20,6 +20,9 @@ import {
 import AddProductModal from "../../components/AddProductModal";
 import EditProductModal from "../../components/EditProductModal";
 import toast, { Toaster } from "react-hot-toast";
+import { Printer } from "lucide-react"; 
+import { useReactToPrint } from "react-to-print";
+import { useRef  } from "react";
 
 export default function ManageProducts() {
   const [products, setProducts] = useState([]);
@@ -28,9 +31,22 @@ export default function ManageProducts() {
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [searchTerm, setSearchTerm] = useState("");
+  const [printBarcode, setPrintBarcode] = useState(null);
+  const barcodePrintRef = useRef();
 
   // ✅ ফিল্টার স্টেট: 'all', 'low', 'out'
   const [filterStatus, setFilterStatus] = useState("all");
+  const handleBarcodePrint = useReactToPrint({
+    contentRef: barcodePrintRef,
+  });
+
+  const triggerPrint = (product) => {
+    setPrintBarcode(product);
+    // ডাটা সেট হওয়ার জন্য সামান্য সময় দিয়ে প্রিন্ট ট্রিগার করা
+    setTimeout(() => {
+      handleBarcodePrint();
+    }, 500);
+  };
 
   const loadProducts = async () => {
     try {
@@ -168,123 +184,97 @@ export default function ManageProducts() {
       </div>
 
       {/* Table Section */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl shadow-slate-200/40 dark:shadow-none">
+      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b dark:border-slate-800">
+            <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b">
               <tr>
-                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Fav
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Product
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Stock
-                </th>
-                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Price / PV
-                </th>
-                <th className="px-6 py-5 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">
-                  Action
-                </th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Fav</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Product</th>
+                {/* ✅ নতুন কলাম: Barcode */}
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Barcode</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Stock</th>
+                <th className="px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest">Price / PV</th>
+                <th className="px-6 py-5 text-right text-[10px] font-black uppercase text-slate-400 tracking-widest">Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-              {loading ? (
-                <tr>
-                  <td colSpan="5" className="py-20 text-center">
-                    <Loader2
-                      className="animate-spin mx-auto text-blue-600"
-                      size={32}
-                    />
-                  </td>
-                </tr>
-              ) : filteredProducts.length === 0 ? (
-                <tr>
-                  <td
-                    colSpan="5"
-                    className="py-20 text-center text-slate-400 font-bold"
-                  >
-                    No products found for this filter.
-                  </td>
-                </tr>
-              ) : (
-                filteredProducts.map((p) => {
-                  const badge = getStockBadge(p.stock);
-                  return (
-                    <tr
-                      key={p.id}
-                      className="group hover:bg-slate-50/50 dark:hover:bg-slate-800/20 transition-all"
-                    >
-                      <td className="px-6 py-4">
-                        <button
-                          onClick={() => toggleFeatured(p)}
-                          className={`transition-transform hover:scale-125 ${p.is_featured ? "text-amber-400" : "text-slate-200 dark:text-slate-700"}`}
-                        >
-                          <Star
-                            size={18}
-                            fill={p.is_featured ? "currentColor" : "none"}
-                          />
-                        </button>
-                      </td>
-                      <td className="px-6 py-4">
-                        <div className="flex items-center gap-3">
-                          <img
-                            src={p.image}
-                            className="w-10 h-10 rounded-xl object-cover border dark:border-slate-700"
-                            alt=""
-                          />
-                          <div>
-                            <p className="font-black text-slate-800 dark:text-white text-xs">
-                              {p.name}
-                            </p>
-                            <p className="text-[9px] text-slate-400 font-bold uppercase">
-                              {p.category_name || "General"}
-                            </p>
+              {filteredProducts.map((p) => {
+                const badge = getStockBadge(p.stock);
+                return (
+                  <tr key={p.id} className="group hover:bg-slate-50/50 transition-all">
+                    <td className="px-6 py-4">
+                      {/* Star Button Logic */}
+                      <button onClick={() => toggleFeatured(p)} className={p.is_featured ? "text-amber-400" : "text-slate-200"}>
+                        <Star size={18} fill={p.is_featured ? "currentColor" : "none"} />
+                      </button>
+                    </td>
+                    <td className="px-6 py-4">
+                      {/* Product Info */}
+                      <div className="flex items-center gap-3">
+                        <img src={p.image} className="w-10 h-10 rounded-xl object-cover" />
+                        <div>
+                          <p className="font-black text-xs">{p.name}</p>
+                          <p className="text-[9px] text-slate-400">{p.category_name || "General"}</p>
+                        </div>
+                      </div>
+                    </td>
+
+                    {/* ✅ বারকোড ইমেজ এবং প্রিন্ট বাটন */}
+                    <td className="px-6 py-4">
+                      <div className="flex flex-col items-start gap-1 group/btn">
+                        {p.barcode_image ? (
+                          <div className="relative cursor-pointer" onClick={() => triggerPrint(p)}>
+                            <img 
+                              src={p.barcode_image} 
+                              alt="barcode" 
+                              className="h-8 w-auto hover:opacity-50 transition-opacity"
+                            />
+                            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                                <Printer size={14} className="text-blue-600" />
+                            </div>
                           </div>
-                        </div>
-                      </td>
-                      <td className="px-6 py-4">
-                        <span
-                          className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${badge.class}`}
-                        >
-                          {p.stock} - {badge.label}
-                        </span>
-                      </td>
-                      <td className="px-6 py-4">
-                        <p className="font-black text-slate-800 dark:text-white text-xs">
-                          ৳{Math.floor(p.price)}
-                        </p>
-                        <p className="text-[9px] font-bold text-emerald-500 uppercase">
-                          {p.point_value} PV
-                        </p>
-                      </td>
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
-                          <button
-                            onClick={() => {
-                              setSelectedProduct(p);
-                              setIsEditModalOpen(true);
-                            }}
-                            className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 dark:hover:bg-blue-900/20 rounded-xl"
-                          >
-                            <Edit size={16} />
-                          </button>
-                          <button
-                            onClick={() => handleDelete(p.id)}
-                            className="p-2 text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-900/20 rounded-xl"
-                          >
-                            <Trash2 size={16} />
-                          </button>
-                        </div>
-                      </td>
-                    </tr>
-                  );
-                })
-              )}
+                        ) : (
+                          <span className="text-[9px] text-slate-300">No Barcode</span>
+                        )}
+                        <p className="text-[9px] font-mono text-slate-500">{p.barcode_number}</p>
+                      </div>
+                    </td>
+
+                    <td className="px-6 py-4">
+                      <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${badge.class}`}>
+                        {p.stock} - {badge.label}
+                      </span>
+                    </td>
+                    <td className="px-6 py-4">
+                      <p className="font-black text-xs">৳{Math.floor(p.price)}</p>
+                      <p className="text-[9px] font-bold text-emerald-500 uppercase">{p.point_value} PV</p>
+                    </td>
+                    <td className="px-6 py-4 text-right">
+                       {/* Action Buttons (Edit/Delete) */}
+                       <div className="flex justify-end gap-1">
+                          <button onClick={() => { setSelectedProduct(p); setIsEditModalOpen(true); }} className="p-2 hover:text-blue-600"><Edit size={16} /></button>
+                          <button onClick={() => handleDelete(p.id)} className="p-2 hover:text-rose-600"><Trash2 size={16} /></button>
+                       </div>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
           </table>
+        </div>
+      </div>
+
+      {/* ✅ হিডেন প্রিন্ট কম্পোনেন্ট */}
+      <div style={{ display: "none" }}>
+        <div ref={barcodePrintRef} className="p-4 flex flex-col items-center justify-center text-center">
+            {printBarcode && (
+                <div style={{ width: "40mm", padding: "5px" }}>
+                    <p style={{ fontSize: "10px", fontWeight: "bold", marginBottom: "2px" }}>{printBarcode.name}</p>
+                    <img src={printBarcode.barcode_image} style={{ width: "100%", height: "auto" }} />
+                    <p style={{ fontSize: "12px", fontWeight: "bold", marginTop: "2px" }}>৳{printBarcode.price}</p>
+                </div>
+            )}
         </div>
       </div>
 

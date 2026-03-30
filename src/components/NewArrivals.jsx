@@ -26,7 +26,7 @@ export default function NewArrivals() {
           ? res.data
           : res.data.results;
 
-        // লেটেস্ট ৬টা প্রোডাক্ট নেওয়া
+        // লেটেস্ট ৬টা প্রোডাক্ট নেওয়া
         setProducts((allProducts || []).slice(0, 6));
       } catch (err) {
         console.error("Data loading failed", err);
@@ -37,27 +37,48 @@ export default function NewArrivals() {
     loadData();
   }, []);
 
-  // ডাবল ডিসকাউন্ট ফিক্স করার জন্য প্রসেস ফাংশন
-  const processCartItem = (p) => {
-    const finalPrice = Number(p.price || 0); // ব্যাকএন্ড থেকে আসা ডিসকাউন্টেড প্রাইস
-    const pointValue = Number(p.point_value || 0);
+  // প্রাইস ক্যালকুলেশন লজিক এক জায়গায় (মেইন লজিক এখানে)
+  const getCalculatedPrice = (p) => {
+    const mainPrice = Number(p.price || 0);
+    const pointVal = Number(p.point_value || 0);
+    const discountAmount = pointVal * 2;
 
-    return {
-      ...p,
-      price: finalPrice,
-      // একটিভ মেম্বার হলে পিভি ০ হবে (তোর বিজনেস লজিক অনুযায়ী)
-      point_value: isActiveMember ? 0 : pointValue,
-      quantity: 1,
-    };
+    if (isActiveMember) {
+      return {
+        sellPrice: mainPrice - discountAmount, // ৪০০০ - ১৮০০ = ২২০০
+        originalPrice: mainPrice,
+        discount: discountAmount,
+        finalPV: 0 // একটিভ মেম্বার হলে পিভি ০
+      };
+    } else {
+      return {
+        sellPrice: mainPrice,
+        originalPrice: null,
+        discount: 0,
+        finalPV: pointVal
+      };
+    }
   };
 
   const handleAddToCart = (p) => {
-    addToCart(processCartItem(p));
+    const { sellPrice, finalPV } = getCalculatedPrice(p);
+    addToCart({
+      ...p,
+      price: sellPrice,
+      point_value: finalPV,
+      quantity: 1,
+    });
     toast.success(`${p.name} added to cart!`, { position: "bottom-right" });
   };
 
   const handleOrderNow = (p) => {
-    addToCart(processCartItem(p));
+    const { sellPrice, finalPV } = getCalculatedPrice(p);
+    addToCart({
+      ...p,
+      price: sellPrice,
+      point_value: finalPV,
+      quantity: 1,
+    });
     router.push("/checkout");
   };
 
@@ -100,23 +121,20 @@ export default function NewArrivals() {
       {/* Grid */}
       <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 gap-5">
         {products.map((p) => {
+          const { sellPrice, originalPrice, discount, finalPV } = getCalculatedPrice(p);
           const pointVal = Number(p.point_value || 0);
-          const displayPrice = Number(p.price || 0); // ব্যাকএন্ড থেকে আসা দাম
-          const discountAmount = pointVal * 2;
-          
-          // যদি মেম্বার একটিভ হয়, তবে আসল দাম হবে displayPrice + discount
-          const originalPrice = isActiveMember ? (displayPrice + discountAmount) : displayPrice;
 
           return (
             <div key={p.id} className="group flex flex-col">
               {/* Image Box */}
-              <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] mb-3 border border-transparent group-hover:border-[#FF620A]/40 transition-all">
-                {/* Badge */}
+              <div className="relative aspect-square rounded-xl overflow-hidden bg-[#F3F4F6] mb-3 border border-transparent group-hover:border-[#FF620A]/40 transition-all shadow-sm">
+                
+                {/* Badge Logic */}
                 {pointVal > 0 && (
                   <div className="absolute top-2 left-2 z-10">
                     <span className={`text-white text-[10px] font-bold px-2 py-1 rounded shadow-md flex items-center gap-1 ${isActiveMember ? 'bg-[#007A55]' : 'bg-[#FF620A]'}`}>
                        {isActiveMember ? <Zap size={10} fill="white" className="animate-pulse" /> : null}
-                       {isActiveMember ? `৳${discountAmount} OFF` : `+${pointVal} PV`}
+                       {isActiveMember ? `৳${discount} OFF` : `+${pointVal} PV`}
                     </span>
                   </div>
                 )}
@@ -129,6 +147,7 @@ export default function NewArrivals() {
                   />
                 </Link>
 
+                {/* Desktop Add to Cart */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="absolute bottom-0 left-0 right-0 bg-slate-800 text-white py-3 font-bold text-[11px] uppercase tracking-wider opacity-0 group-hover:opacity-100 transition-all duration-300 hidden md:flex items-center justify-center gap-2 hover:bg-black"
@@ -136,6 +155,7 @@ export default function NewArrivals() {
                   <ShoppingCart size={14} /> Add to Cart
                 </button>
 
+                {/* Mobile Add to Cart */}
                 <button
                   onClick={() => handleAddToCart(p)}
                   className="md:hidden absolute bottom-2 right-2 bg-white p-2 rounded-full shadow-md active:scale-90 z-10 border border-slate-100"
@@ -154,9 +174,9 @@ export default function NewArrivals() {
 
                 <div className="flex items-center flex-wrap gap-x-2">
                   <span className="text-[#007A55] font-bold text-sm">
-                    Tk {Math.floor(displayPrice).toLocaleString()}
+                    Tk {Math.floor(sellPrice).toLocaleString()}
                   </span>
-                  {isActiveMember && discountAmount > 0 && (
+                  {isActiveMember && originalPrice && (
                     <span className="text-slate-400 text-[11px] line-through">
                       Tk {Math.floor(originalPrice).toLocaleString()}
                     </span>

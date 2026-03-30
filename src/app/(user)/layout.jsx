@@ -212,7 +212,7 @@ export default function UserLayout({ children }) {
               </nav>
 
               {/* Promo Card */}
-              <div className="mt-8 px-4 lg:px-0">
+              {/* <div className="mt-8 px-4 lg:px-0">
                 <div className="bg-indigo-600 rounded-2xl p-5 text-white shadow-lg shadow-indigo-100 relative overflow-hidden">
                   <div className="relative z-10">
                     <p className="text-xs font-bold text-indigo-100 uppercase tracking-wider mb-1">
@@ -227,7 +227,7 @@ export default function UserLayout({ children }) {
                   </div>
                   <div className="absolute -right-4 -bottom-4 w-24 h-24 bg-white/10 rounded-full blur-2xl"></div>
                 </div>
-              </div>
+              </div> */}
             </div>
           </aside>
 
@@ -240,7 +240,7 @@ export default function UserLayout({ children }) {
         </div>
       </div>
 
-      <footer className="mt-auto py-8 border-t border-slate-200 bg-white">
+      {/* <footer className="mt-auto py-8 border-t border-slate-200 bg-white">
         <div className="max-w-[1600px] mx-auto px-4 text-center sm:flex sm:justify-between items-center text-slate-400 text-sm">
           <p>© 2024 Portal Dashboard. Professional Solution.</p>
           <div className="flex gap-6 justify-center mt-4 sm:mt-0 font-medium">
@@ -255,7 +255,7 @@ export default function UserLayout({ children }) {
             </a>
           </div>
         </div>
-      </footer>
+      </footer> */}
     </div>
   );
 }

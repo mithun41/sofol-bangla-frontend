@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import api from "@/services/api";
+import toast from "react-hot-toast";
 
 export default function WithdrawPage() {
   const [balance, setBalance] = useState(0);
@@ -31,7 +32,7 @@ export default function WithdrawPage() {
   const handleWithdraw = async (e) => {
     e.preventDefault();
     if (parseFloat(amount) > balance) {
-      alert("Insufficient Balance!");
+      toast("Insufficient Balance!");
       return;
     }
 

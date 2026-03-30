@@ -116,6 +116,11 @@ export default function AdminLayout({ children }) {
         href: "/admin-dashboard/admin-tree",
         Icon: Network,
       },
+      {
+        name: "My Network",
+        href: "/admin-dashboard/my-network",
+        Icon: Network,
+      },
       { name: "Bonus Logs", href: "/admin-dashboard/bonus-logs", Icon: Wallet },
       {
         name: "Withdrawals",

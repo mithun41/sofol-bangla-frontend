@@ -2,6 +2,7 @@
 import { useState, useEffect } from "react";
 import { X, CheckCircle2, Loader2, Upload, Banknote, Tag } from "lucide-react";
 import { getAllCategories, updateProduct } from "@/services/productService";
+import toast from "react-hot-toast";
 
 export default function EditProductModal({
   isOpen,
@@ -59,7 +60,7 @@ export default function EditProductModal({
       onSuccess();
       onClose();
     } catch (err) {
-      alert("Update failed. Please try again.");
+      toast("Update failed. Please try again.");
     } finally {
       setLoading(false);
     }

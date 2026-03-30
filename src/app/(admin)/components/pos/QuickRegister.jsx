@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, memo } from "react"; // memo যোগ করা হয়েছে
 import {
   UserPlus,
   MapPin,
@@ -9,9 +9,42 @@ import {
   User,
   Link as LinkIcon,
   Layers,
+  AlertCircle,
 } from "lucide-react";
 import { authService } from "@/services/authService";
 import { toast } from "react-hot-toast";
+
+// ১. Field কম্পোনেন্টকে বাইরে নিয়ে আসা হয়েছে যাতে রি-রেন্ডারে ফোকাস না হারায়
+const Field = ({ name, placeholder, icon: Icon, type = "text", required = false, value, onChange, error, children }) => (
+  <div>
+    <div
+      className={`flex items-center gap-2 bg-white border rounded-xl px-3 py-2.5 transition-all
+        ${error
+          ? "border-rose-300 bg-rose-50"
+          : "border-slate-200 focus-within:border-blue-300 focus-within:bg-white"
+        }`}
+    >
+      <Icon size={13} className="text-slate-400 shrink-0" />
+      {children || (
+        <input
+          name={name}
+          type={type}
+          placeholder={placeholder + (required ? " *" : "")}
+          className="flex-1 bg-transparent outline-none text-xs font-semibold text-slate-700 placeholder:text-slate-300"
+          value={value}
+          onChange={onChange}
+          required={required}
+          autoComplete="off"
+        />
+      )}
+    </div>
+    {error && (
+      <p className="flex items-center gap-1 text-rose-500 text-[10px] mt-1 font-semibold">
+        <AlertCircle size={9} /> {Array.isArray(error) ? error[0] : error}
+      </p>
+    )}
+  </div>
+);
 
 export default function QuickRegister({ onRegisterSuccess }) {
   const [formData, setFormData] = useState({
@@ -28,26 +61,18 @@ export default function QuickRegister({ onRegisterSuccess }) {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  const divisions = [
-    "Dhaka",
-    "Chittagong",
-    "Rajshahi",
-    "Khulna",
-    "Barisal",
-    "Sylhet",
-    "Rangpur",
-    "Mymensingh",
-  ];
+  const divisions = ["Dhaka", "Chittagong", "Rajshahi", "Khulna", "Barisal", "Sylhet", "Rangpur", "Mymensingh"];
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // ফোকাস ধরে রাখতে স্টেট আপডেট লজিক সহজ করা হয়েছে
     setFormData((prev) => ({ ...prev, [name]: value }));
+    
+    // শুধু যদি ওই ফিল্ডে এরর থাকে তবেই এরর স্টেট আপডেট হবে
     if (errors[name]) {
-      setErrors((prev) => {
-        const newErrors = { ...prev };
-        delete newErrors[name];
-        return newErrors;
-      });
+      const newErrors = { ...errors };
+      delete newErrors[name];
+      setErrors(newErrors);
     }
   };
 
@@ -58,183 +83,75 @@ export default function QuickRegister({ onRegisterSuccess }) {
 
     try {
       const res = await authService.register(formData);
-      console.log("API Response in QuickRegister:", res);
       const userData = res?.data || res;
-      toast.success("Customer registered successfully!"); // Updated
+      toast.success("Customer registered successfully!");
       onRegisterSuccess(userData);
-
       setFormData({
-        name: "",
-        username: "",
-        password: "",
-        phone: "",
-        division: "",
-        reff_id: "",
-        placement_id: "",
-        position: "",
+        name: "", username: "", password: "", phone: "",
+        division: "", reff_id: "", placement_id: "", position: "",
       });
     } catch (err) {
       if (err && typeof err === "object") {
         setErrors(err);
-        toast.error("Validation failed. Please check fields."); // Updated
+        toast.error("Validation failed.");
       } else {
-        toast.error("Registration failed!"); // Updated
+        toast.error("Registration failed!");
       }
     } finally {
       setLoading(false);
     }
   };
 
-  const renderError = (field) => {
-    if (!errors[field]) return null;
-    const message = Array.isArray(errors[field])
-      ? errors[field][0]
-      : errors[field];
-    return (
-      <p className="text-red-500 text-[10px] mt-1 font-medium italic">
-        {message}
-      </p>
-    );
-  };
-
-  const inputStyle = (field) =>
-    `w-full bg-slate-50 pl-10 pr-4 py-2.5 rounded-xl border ${
-      errors[field] ? "border-red-500 bg-red-50" : "border-slate-200"
-    } text-sm font-bold outline-[#FF620A] transition-all`;
-
   return (
-    <div className="bg-white p-6 rounded-[2rem] border border-slate-200 shadow-sm mt-4">
-      <h3 className="flex items-center gap-2 text-[10px] font-black uppercase text-[#FF620A] mb-4 ml-2 tracking-widest">
-        <UserPlus size={14} /> Quick Customer Register
-      </h3>
-
-      <form
-        onSubmit={handleSubmit}
-        className="grid grid-cols-1 md:grid-cols-4 gap-3"
-      >
-        <div className="relative">
-          <User className="absolute left-3 top-3 text-slate-400" size={16} />
-          <input
-            name="name"
-            type="text"
-            placeholder="Full Name *"
-            className={inputStyle("name")}
-            value={formData.name}
-            onChange={handleChange}
-            required
-          />
-          {renderError("name")}
+    <div className="bg-amber-50 border border-amber-200 rounded-2xl p-5 mt-4">
+      <div className="flex items-center gap-2 mb-4">
+        <div className="w-7 h-7 rounded-lg bg-amber-100 flex items-center justify-center text-amber-600">
+          <UserPlus size={14} />
         </div>
+        <h3 className="text-[10px] font-black uppercase tracking-widest text-amber-600">
+          Quick Register
+        </h3>
+      </div>
 
-        <div className="relative">
-          <User className="absolute left-3 top-3 text-slate-400" size={16} />
-          <input
-            name="username"
-            type="text"
-            placeholder="Username *"
-            className={inputStyle("username")}
-            value={formData.username}
-            onChange={handleChange}
-            required
-          />
-          {renderError("username")}
-        </div>
+      <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-4 gap-3">
+        <Field name="name" placeholder="Full Name" icon={User} required value={formData.name} onChange={handleChange} error={errors.name} />
+        <Field name="username" placeholder="Username" icon={User} required value={formData.username} onChange={handleChange} error={errors.username} />
+        <Field name="phone" placeholder="Phone" icon={Phone} type="number" required value={formData.phone} onChange={handleChange} error={errors.phone} />
+        <Field name="password" placeholder="Password" icon={Lock} type="password" required value={formData.password} onChange={handleChange} error={errors.password} />
 
-        <div className="relative">
-          <Phone className="absolute left-3 top-3 text-slate-400" size={16} />
-          <input
-            name="phone"
-            type="number"
-            placeholder="Phone *"
-            className={inputStyle("phone")}
-            value={formData.phone}
-            onChange={handleChange}
-            required
-          />
-          {renderError("phone")}
-        </div>
-
-        <div className="relative">
-          <Lock className="absolute left-3 top-3 text-slate-400" size={16} />
-          <input
-            name="password"
-            type="password"
-            placeholder="Password *"
-            className={inputStyle("password")}
-            value={formData.password}
-            onChange={handleChange}
-            required
-          />
-          {renderError("password")}
-        </div>
-
-        <div className="relative">
-          <MapPin className="absolute left-3 top-3 text-slate-400" size={16} />
+        <Field name="division" placeholder="Division" icon={MapPin} required error={errors.division}>
           <select
             name="division"
-            className={inputStyle("division")}
             value={formData.division}
             onChange={handleChange}
             required
+            className="flex-1 bg-transparent outline-none text-xs font-semibold text-slate-700 appearance-none cursor-pointer"
           >
             <option value="">Division *</option>
-            {divisions.map((div) => (
-              <option key={div} value={div}>
-                {div}
-              </option>
-            ))}
+            {divisions.map((div) => <option key={div} value={div}>{div}</option>)}
           </select>
-          {renderError("division")}
-        </div>
+        </Field>
 
-        <div className="relative">
-          <LinkIcon
-            className="absolute left-3 top-3 text-slate-400"
-            size={16}
-          />
-          <input
-            name="reff_id"
-            type="text"
-            placeholder="Referral ID (Opt)"
-            className={inputStyle("reff_id")}
-            value={formData.reff_id}
-            onChange={handleChange}
-          />
-          {renderError("reff_id")}
-        </div>
+        <Field name="reff_id" placeholder="Referral ID" icon={LinkIcon} value={formData.reff_id} onChange={handleChange} error={errors.reff_id} />
+        <Field name="placement_id" placeholder="Placement ID" icon={Layers} value={formData.placement_id} onChange={handleChange} error={errors.placement_id} />
 
-        <div className="relative">
-          <Layers className="absolute left-3 top-3 text-slate-400" size={16} />
-          <input
-            name="placement_id"
-            type="text"
-            placeholder="Placement ID (Opt)"
-            className={inputStyle("placement_id")}
-            value={formData.placement_id}
-            onChange={handleChange}
-          />
-          {renderError("placement_id")}
-        </div>
-
-        <div className="relative">
-          <Layers className="absolute left-3 top-3 text-slate-400" size={16} />
+        <Field name="position" placeholder="Position" icon={Layers} error={errors.position}>
           <select
             name="position"
-            className={inputStyle("position")}
             value={formData.position}
             onChange={handleChange}
+            className="flex-1 bg-transparent outline-none text-xs font-semibold text-slate-700 appearance-none cursor-pointer"
           >
-            <option value="">Position (Opt)</option>
+            <option value="">Position (Optional)</option>
             <option value="left">Left</option>
             <option value="right">Right</option>
           </select>
-          {renderError("position")}
-        </div>
+        </Field>
 
         <button
           type="submit"
           disabled={loading}
-          className="md:col-span-4 bg-[#FF620A] hover:bg-slate-900 text-white font-black py-3 rounded-xl transition-all active:scale-95 disabled:opacity-50 mt-2 shadow-md"
+          className="md:col-span-4 flex items-center justify-center gap-2 bg-slate-900 hover:bg-slate-800 disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-widest py-3.5 rounded-xl transition-all active:scale-[0.99] mt-1"
         >
           {loading ? "Registering..." : "Register & Select Customer"}
         </button>

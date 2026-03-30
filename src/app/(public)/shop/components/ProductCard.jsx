@@ -1,22 +1,37 @@
 "use client";
 
 import Link from "next/link";
-import { ShoppingCart } from "lucide-react";
-import { useAuth } from "@/context/AuthContext"; // AuthContext ইম্পোর্ট করুন
+import { ShoppingCart, Zap } from "lucide-react";
+import { useAuth } from "@/context/AuthContext";
 
 export default function ProductCard({ product, onAddToCart, onOrderNow }) {
-  const { user } = useAuth(); // সরাসরি ইউজার ডাটা নিন
+  const { user } = useAuth();
 
-  // ১. ইউজার একটিভ মেম্বার কি না তা চেক করুন
-  const isActiveMember = user?.status === "active";
+  // ১. ইউজার একটিভ মেম্বার কি না তা চেক (Safe Check)
+  const isActiveMember = user?.status?.toLowerCase() === "active" || user?.profile?.status?.toLowerCase() === "active";
 
-  // ২. ডিসকাউন্ট লজিক (PV * 2)
-  const discount = Number(product.point_value || 0) * 2;
+  // ২. প্রাইস এবং ডিসকাউন্ট লজিক
+  const mainPrice = Number(product.price || 0);
+  const pointVal = Number(product.point_value || 0);
+  const discountAmount = pointVal * 2;
 
-  // ৩. ফাইনাল দাম নির্ধারণ (একটিভ মেম্বার হলে ডিসকাউন্ট হবে)
-  const finalPrice = Number(product.price || 0);
+  // ৩. ফাইনাল ডিসপ্লে প্রাইস নির্ধারণ
+  // একটিভ হলে: ৪০০০ - ১৮০০ = ২২০০
+  // একটিভ না হলে: ৪০০০
+  const displayPrice = isActiveMember ? (mainPrice - discountAmount) : mainPrice;
+  const originalPrice = mainPrice;
 
   const outOfStock = Number(product.stock || 0) <= 0;
+
+  // কার্টে ডাটা পাঠানোর জন্য হেল্পার
+  const handleAction = (callback) => {
+    callback({
+      ...product,
+      price: displayPrice,
+      point_value: isActiveMember ? 0 : pointVal, // একটিভ মেম্বার হলে পিভি ০
+      quantity: 1
+    });
+  };
 
   return (
     <div className="group relative bg-white rounded-2xl overflow-hidden border border-slate-100 hover:border-[#FF620A]/40 hover:shadow-xl transition-all duration-300 flex flex-col">
@@ -38,16 +53,15 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
             </span>
           ) : (
             <>
-              {/* ইউজার একটিভ হলে "৳ ডিসকাউন্ট" ব্যাজ দেখাবে */}
-              {isActiveMember && discount > 0 ? (
-                <span className="bg-[#FF620A] text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-lg">
-                  ৳{discount} OFF
+              {isActiveMember && discountAmount > 0 ? (
+                <span className="bg-[#007A55] text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-lg flex items-center gap-1">
+                  <Zap size={10} fill="white" className="animate-pulse" />
+                  ৳{discountAmount} OFF
                 </span>
               ) : (
-                /* ইউজার একটিভ না হলে regular PV ব্যাজ দেখাবে */
-                product.point_value > 0 && (
-                  <span className="bg-emerald-600 text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-lg">
-                    +{product.point_value} PV
+                pointVal > 0 && (
+                  <span className="bg-[#FF620A] text-white text-[9px] font-black px-2.5 py-1 rounded-full uppercase tracking-wide shadow-lg">
+                    +{pointVal} PV
                   </span>
                 )
               )}
@@ -55,12 +69,12 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
           )}
         </div>
 
-        {/* Hover Add to Cart */}
+        {/* Hover Add to Cart (Desktop) */}
         {!outOfStock && (
           <div className="absolute inset-x-0 bottom-0 translate-y-full group-hover:translate-y-0 transition-transform duration-300">
             <button
-              onClick={() => onAddToCart(product)}
-              className="w-full py-3 bg-[#007a55] hover:bg-[#e05500] text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
+              onClick={() => handleAction(onAddToCart)}
+              className="w-full py-3 bg-slate-900/90 hover:bg-black text-white text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2 transition-colors"
             >
               <ShoppingCart size={13} />
               Add to Cart
@@ -80,29 +94,30 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
         <div className="mt-auto">
           <div className="flex items-end justify-between">
             <div>
-              {/* মেইন প্রাইস */}
+              {/* সেল প্রাইস (২২০০) */}
               <p className="text-base font-black text-[#007a55]">
-                ৳{Math.floor(finalPrice).toLocaleString()}
+                ৳{Math.floor(displayPrice).toLocaleString()}
               </p>
 
-              {/* অফার প্রাইস থাকলে আগের প্রাইস কাটা (line-through) দেখাবে */}
-              {isActiveMember && discount > 0 && (
+              {/* অরিজিনাল প্রাইস (৪০০০) - শুধু একটিভ মেম্বারদের জন্য কাটা অবস্থায় দেখাবে */}
+              {isActiveMember && discountAmount > 0 && (
                 <p className="text-[11px] text-slate-400 line-through mt-0.5">
-                  ৳{Math.floor(product.original_price).toLocaleString()}
+                  ৳{Math.floor(originalPrice).toLocaleString()}
                 </p>
               )}
 
-              {/* একটিভ না হলে "Earn PV" টেক্সট দেখাবে */}
-              {!isActiveMember && product.point_value > 0 && (
+              {/* একটিভ না হলে PV আর্নিং দেখাবে */}
+              {!isActiveMember && pointVal > 0 && (
                 <p className="text-[10px] text-emerald-600 font-bold mt-0.5">
-                  Get {product.point_value} PV
+                  Get {pointVal} PV
                 </p>
               )}
             </div>
 
+            {/* Mobile Cart Button */}
             {!outOfStock && (
               <button
-                onClick={() => onAddToCart(product)}
+                onClick={() => handleAction(onAddToCart)}
                 className="w-9 h-9 flex items-center justify-center bg-orange-50 hover:bg-[#FF620A] text-[#FF620A] hover:text-white rounded-xl transition-all border border-orange-200 lg:hidden"
               >
                 <ShoppingCart size={14} />
@@ -111,11 +126,11 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
           </div>
 
           <button
-            onClick={() => onOrderNow(product)}
+            onClick={() => handleAction(onOrderNow)}
             disabled={outOfStock}
-            className="mt-3 w-full py-2.5 rounded-xl bg-[#FF620A] hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white text-[11px] font-black uppercase tracking-wide transition-all"
+            className="mt-3 w-full py-2.5 rounded-xl bg-[#FF620A] hover:bg-slate-800 disabled:bg-slate-100 disabled:text-slate-400 text-white text-[11px] font-black uppercase tracking-wide transition-all shadow-sm"
           >
-            Order Now
+            {outOfStock ? "Out of Stock" : "Order Now"}
           </button>
         </div>
       </div>

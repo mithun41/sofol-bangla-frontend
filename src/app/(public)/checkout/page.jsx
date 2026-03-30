@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { orderService } from "@/services/order";
+import toast from "react-hot-toast";
 
 export default function CheckoutPage() {
   const { cart, clearCart } = useCart();
@@ -111,13 +112,13 @@ export default function CheckoutPage() {
         clearCart();
         router.push(`/order-success?id=${res.order_id}`);
       } else {
-        alert("Order processed but ID not found.");
+        toast("Order processed but ID not found.");
       }
     } catch (error) {
       const errorMessage =
         error.response?.data?.error ||
         "Order failed! Please check your information.";
-      alert(errorMessage);
+      toast(errorMessage);
       console.error("Order Error:", error);
     } finally {
       setOrderLoading(false);

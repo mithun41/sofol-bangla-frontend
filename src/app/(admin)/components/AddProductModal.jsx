@@ -1,39 +1,55 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, Upload, CheckCircle2, Loader2, Banknote, Tag } from "lucide-react";
+import {
+  X,
+  Upload,
+  CheckCircle2,
+  Loader2,
+  Banknote,
+  Tag,
+  Trash2,
+  Layers,
+} from "lucide-react";
 import { createProduct, getAllCategories } from "@/services/productService";
 
 export default function AddProductModal({ isOpen, onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(null);
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    purchase_price: "", // কেনা দাম
-    price: "", // বিক্রি দাম
+    unit_type: "piece", // ডিফল্ট 'piece' সেট করা হলো
+    purchase_price: "",
+    price: "",
     stock: "",
     description: "",
     image: null,
   });
 
   useEffect(() => {
-    getAllCategories().then((res) => setCategories(res.data));
+    getAllCategories().then((res) => {
+      const data = Array.isArray(res.data) ? res.data : res.data.results;
+      setCategories(data || []);
+    });
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: files ? files[0] : value,
-    }));
-  };
-
-  // লাইভ পয়েন্ট ক্যালকুলেশন লজিক: (বিক্রি দাম - কেনা দাম) / 4
-  const calculatedPV = () => {
+  const calculatePVValue = () => {
     const buy = parseFloat(formData.purchase_price) || 0;
     const sell = parseFloat(formData.price) || 0;
     const profit = sell - buy;
     return profit > 0 ? (profit / 4).toFixed(2) : "0.00";
+  };
+
+  const handleChange = (e) => {
+    const { name, value, files } = e.target;
+    if (name === "image" && files && files[0]) {
+      const file = files[0];
+      setFormData((prev) => ({ ...prev, image: file }));
+      setPreview(URL.createObjectURL(file));
+    } else {
+      setFormData((prev) => ({ ...prev, [name]: value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -44,17 +60,20 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
     Object.keys(formData).forEach((key) => {
       if (formData[key] !== null) data.append(key, formData[key]);
     });
+    data.append("point_value", Math.round(calculatePVValue()));
 
     try {
       await createProduct(data);
       onSuccess();
       onClose();
     } catch (err) {
-      alert("Error creating product. Check your inputs.");
+      alert("Error creating product!");
     } finally {
       setLoading(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -66,7 +85,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               Add New Product
             </h2>
             <p className="text-xs text-slate-500 font-medium">
-              Point Value (PV) will be calculated automatically
+              Select correct unit type for stock management
             </p>
           </div>
           <button
@@ -114,18 +133,38 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </select>
             </div>
 
+            {/* ✅ Unit Type (নতুন যোগ করা হলো) */}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
+                Unit Type
+              </label>
+              <select
+                name="unit_type"
+                required
+                onChange={handleChange}
+                defaultValue="piece"
+                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all appearance-none font-bold"
+              >
+                <option value="piece">Piece (pcs)</option>
+                <option value="kg">Kilogram (kg)</option>
+                <option value="gram">Gram (g)</option>
+                <option value="liter">Liter (L)</option>
+              </select>
+            </div>
+
             {/* Stock */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
-                Stock Quantity
+                Initial Stock
               </label>
               <input
                 type="number"
+                step="0.001"
                 name="stock"
                 required
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="0"
+                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-bold text-blue-600"
+                placeholder="0.00"
               />
             </div>
 
@@ -150,7 +189,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* Selling Price */}
+            {/* Selling Price & PV Display (বাকি অংশ আগের মতোই) */}
             <div className="relative">
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
                 Selling Price (৳)
@@ -171,7 +210,6 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* PV Points Display (Automatic) */}
             <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 p-4 rounded-2xl flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
@@ -182,62 +220,79 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
                 </p>
               </div>
               <div className="text-3xl font-black text-emerald-600 dark:text-emerald-400">
-                {calculatedPV()}
+                {calculatePVValue()}
               </div>
-            </div>
-
-            {/* Description */}
-            <div className="md:col-span-2">
-              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
-                Product Description
-              </label>
-              <textarea
-                name="description"
-                rows="3"
-                required
-                onChange={handleChange}
-                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
-                placeholder="Write detailed product information..."
-              ></textarea>
             </div>
           </div>
 
-          {/* Image Upload */}
+          {/* Description & Image Preview (আগের কোড অনুযায়ী থাকবে) */}
+          <div className="md:col-span-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
+              Product Description
+            </label>
+            <textarea
+              name="description"
+              rows="2"
+              required
+              onChange={handleChange}
+              className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all"
+              placeholder="Short description..."
+            ></textarea>
+          </div>
+
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
               Product Image
             </label>
-            <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center hover:border-blue-400 transition-colors group">
-              <input
-                type="file"
-                name="image"
-                required
-                onChange={handleChange}
-                className="absolute inset-0 opacity-0 cursor-pointer z-20"
-              />
-              <div className="flex flex-col items-center gap-2 text-slate-500 group-hover:text-blue-500 transition-colors">
-                <Upload size={32} strokeWidth={1.5} />
-                <span className="text-sm font-medium">
-                  {formData.image
-                    ? formData.image.name
-                    : "Drop image here or click to upload"}
+            {!preview ? (
+              <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:border-blue-400 group cursor-pointer transition-all">
+                <input
+                  type="file"
+                  name="image"
+                  required
+                  onChange={handleChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                />
+                <Upload
+                  className="mx-auto text-slate-400 group-hover:text-blue-500 mb-2"
+                  size={32}
+                />
+                <span className="text-sm font-medium text-slate-500">
+                  Upload Photo
                 </span>
               </div>
-            </div>
+            ) : (
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden group">
+                <img
+                  src={preview}
+                  className="w-full h-full object-cover"
+                  alt="preview"
+                />
+                <button
+                  type="button"
+                  onClick={() => {
+                    setPreview(null);
+                    setFormData((p) => ({ ...p, image: null }));
+                  }}
+                  className="absolute top-4 right-4 bg-rose-500 text-white p-2 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity"
+                >
+                  <Trash2 size={16} />
+                </button>
+              </div>
+            )}
           </div>
 
-          {/* Submit Button */}
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 dark:bg-blue-600 hover:bg-slate-800 dark:hover:bg-blue-700 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 transition-all shadow-xl shadow-slate-200 dark:shadow-blue-900/20"
+            className="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all"
           >
             {loading ? (
               <Loader2 className="animate-spin" />
             ) : (
               <CheckCircle2 size={22} />
             )}
-            {loading ? "Creating Product..." : "Confirm & Publish Product"}
+            {loading ? "Publishing..." : "Confirm & Publish Product"}
           </button>
         </form>
       </div>

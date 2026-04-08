@@ -23,6 +23,7 @@ export default function CartPage() {
 
   const isActiveMember = user?.status === "active";
 
+  // সাবটোটাল ক্যালকুলেশন (toFixed দিয়ে floating point error ফিক্স করা)
   const subtotal = cart.reduce((acc, item) => {
     const basePrice = Number(item.price || 0);
     const pv = Number(item.point_value || 0);
@@ -97,6 +98,10 @@ export default function CartPage() {
               const basePrice = Number(item.price || 0);
               const pv = Number(item.point_value || 0);
 
+              // কেজি হলে ০.২৫ করে বাড়বে, না হলে ১
+              const isKg = item.unit_type === "kg";
+              const step = isKg ? 0.25 : 1;
+
               const effectivePrice = isActiveMember
                 ? Math.max(0, basePrice - pv * 2)
                 : basePrice;
@@ -107,6 +112,7 @@ export default function CartPage() {
                   className="bg-white rounded-3xl border border-slate-100 shadow-sm p-4 md:p-5"
                 >
                   <div className="flex gap-4">
+                    {/* প্রোডাক্ট ইমেজ */}
                     <Link
                       href={`/shop/${item.id}`}
                       className="shrink-0 rounded-2xl overflow-hidden border border-slate-200 bg-slate-50"
@@ -118,6 +124,7 @@ export default function CartPage() {
                       />
                     </Link>
 
+                    {/* প্রোডাক্ট ইনফো */}
                     <div className="flex-1 min-w-0">
                       <div className="flex items-start justify-between gap-3">
                         <div className="min-w-0">
@@ -146,6 +153,7 @@ export default function CartPage() {
                           </div>
                         </div>
 
+                        {/* রিমুভ বাটন */}
                         <button
                           onClick={() =>
                             removeFromCart(item.id, item.cartItemId)
@@ -158,28 +166,43 @@ export default function CartPage() {
                       </div>
 
                       <div className="mt-4 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+                        {/* কোয়ান্টিটি কন্ট্রোল */}
                         <div>
                           <p className="text-xs font-semibold text-slate-500 mb-2">
-                            Quantity
+                            Quantity {isKg ? "(In KG)" : "(In Pcs)"}
                           </p>
 
                           <div className="inline-flex items-center rounded-xl border border-slate-200 overflow-hidden bg-slate-50">
                             <button
-                              onClick={() =>
-                                updateQuantity(item.id, item.cartItemId, -1)
-                              }
+                              onClick={() => {
+                                // স্টেপ অনুযায়ী মিনিমাম ভ্যালু চেক
+                                if (item.quantity > step) {
+                                  updateQuantity(
+                                    item.id,
+                                    item.cartItemId,
+                                    -step,
+                                  );
+                                }
+                              }}
                               className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 transition"
                             >
                               <Minus size={16} />
                             </button>
 
-                            <span className="w-12 text-center font-bold text-slate-800">
-                              {item.quantity}
-                            </span>
+                            <div className="w-20 text-center flex flex-col items-center justify-center">
+                              <span className="font-bold text-slate-800 text-sm">
+                                {item.quantity}
+                              </span>
+                              {isKg && (
+                                <span className="text-[9px] font-bold uppercase text-[#FF620A]">
+                                  {item.quantity * 1000} gm
+                                </span>
+                              )}
+                            </div>
 
                             <button
                               onClick={() =>
-                                updateQuantity(item.id, item.cartItemId, 1)
+                                updateQuantity(item.id, item.cartItemId, step)
                               }
                               className="w-10 h-10 flex items-center justify-center hover:bg-slate-100 transition"
                             >
@@ -188,12 +211,13 @@ export default function CartPage() {
                           </div>
                         </div>
 
+                        {/* আইটেম টোটাল প্রাইস */}
                         <div className="text-left sm:text-right">
                           <p className="text-xs font-medium text-slate-500 mb-1">
                             Item Total
                           </p>
                           <p className="text-lg font-black text-slate-900">
-                            ৳{effectivePrice * item.quantity}
+                            ৳{(effectivePrice * item.quantity).toFixed(2)}
                           </p>
                         </div>
                       </div>
@@ -229,16 +253,9 @@ export default function CartPage() {
 
               <div className="space-y-4 mb-6">
                 <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-sm font-medium">Items</span>
-                  <span className="font-bold text-slate-800">
-                    {cart.reduce((acc, item) => acc + item.quantity, 0)}
-                  </span>
-                </div>
-
-                <div className="flex justify-between items-center text-slate-500">
-                  <span className="text-sm font-medium">Total Points (PV)</span>
+                  <span className="text-sm font-medium">Sub-total PV</span>
                   <span className="text-[#007A55] font-bold bg-[#007A55]/10 px-2.5 py-1 rounded-lg text-sm">
-                    {totalPV}
+                    {totalPV.toFixed(2)}
                   </span>
                 </div>
 
@@ -259,7 +276,7 @@ export default function CartPage() {
                 <div className="flex justify-between items-center pt-3 text-slate-900 border-t border-slate-100">
                   <span className="text-lg font-bold">Subtotal</span>
                   <span className="text-3xl font-black text-[#FF620A]">
-                    ৳{subtotal}
+                    ৳{subtotal.toFixed(2)}
                   </span>
                 </div>
               </div>

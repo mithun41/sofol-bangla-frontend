@@ -44,61 +44,64 @@ export default function POSPage() {
   const beepRef = useRef(null);
 
   const handlePrint = useReactToPrint({ contentRef: invoiceRef });
-// ── ফোকাস লজিক: রেজিস্ট্রেশন বা সার্চের সময় ডিস্টার্ব করবে না ──────────────────
-useEffect(() => {
-  const handleGlobalClick = (e) => {
-    const active = document.activeElement;
-    
-    // ১. যদি বর্তমানে কোনো ইনপুট ফিল্ড অলরেডি ফোকাসড থাকে, তবে আমরা কিছুই করব না
-    const isAlreadyTyping = 
-      active.tagName === "INPUT" || 
-      active.tagName === "TEXTAREA" || 
-      active.tagName === "SELECT" ||
-      active.isContentEditable;
+  // ── ফোকাস লজিক: রেজিস্ট্রেশন বা সার্চের সময় ডিস্টার্ব করবে না ──────────────────
+  useEffect(() => {
+    const handleGlobalClick = (e) => {
+      const active = document.activeElement;
 
-    if (isAlreadyTyping) return; // টাইপ করা অবস্থায় ফোকাস কাড়বে না
+      // ১. যদি বর্তমানে কোনো ইনপুট ফিল্ড অলরেডি ফোকাসড থাকে, তবে আমরা কিছুই করব না
+      const isAlreadyTyping =
+        active.tagName === "INPUT" ||
+        active.tagName === "TEXTAREA" ||
+        active.tagName === "SELECT" ||
+        active.isContentEditable;
 
-    // ২. ক্লিক করা এলিমেন্টটি চেক করা
-    const clickedElement = e.target;
-    const isInteractive = 
-      clickedElement.tagName === "INPUT" || 
-      clickedElement.tagName === "TEXTAREA" || 
-      clickedElement.tagName === "SELECT" ||
-      clickedElement.closest('button') ||
-      clickedElement.closest('.customer-dropdown') ||
-      clickedElement.closest('.swal2-container'); // SweetAlert খোলা থাকলে ডিস্টার্ব করবে না
+      if (isAlreadyTyping) return; // টাইপ করা অবস্থায় ফোকাস কাড়বে না
 
-    // ৩. যদি একদম ফাঁকা জায়গায় ক্লিক হয়, শুধু তখনই স্ক্যানারে যাবে
-    if (!isInteractive) {
+      // ২. ক্লিক করা এলিমেন্টটি চেক করা
+      const clickedElement = e.target;
+      const isInteractive =
+        clickedElement.tagName === "INPUT" ||
+        clickedElement.tagName === "TEXTAREA" ||
+        clickedElement.tagName === "SELECT" ||
+        clickedElement.closest("button") ||
+        clickedElement.closest(".customer-dropdown") ||
+        clickedElement.closest(".swal2-container"); // SweetAlert খোলা থাকলে ডিস্টার্ব করবে না
+
+      // ৩. যদি একদম ফাঁকা জায়গায় ক্লিক হয়, শুধু তখনই স্ক্যানারে যাবে
+      if (!isInteractive) {
+        setTimeout(() => {
+          // পুনরায় চেক করা যেন এর মধ্যে ইউজার অন্য কোথাও ক্লিক না করে ফেলে
+          if (
+            document.activeElement.tagName === "BODY" ||
+            document.activeElement.tagName === "DIV"
+          ) {
+            barcodeRef.current?.focus();
+          }
+        }, 50);
+      }
+    };
+
+    // ৪. ফোকাস আউট হয়ে গেলে যেন হারিয়ে না যায় (স্মার্ট রিটার্ন)
+    const handleBlurLogic = (e) => {
+      // যদি ট্যাব বা অন্য কারণে ফোকাস চলে যায়, তবে ৩৫০ms পর স্ক্যানারে ফিরবে
+      // কিন্তু যদি ইউজার অন্য কোনো ইনপুটে যায়, তবে ফিরবে না
       setTimeout(() => {
-        // পুনরায় চেক করা যেন এর মধ্যে ইউজার অন্য কোথাও ক্লিক না করে ফেলে
-        if (document.activeElement.tagName === 'BODY' || document.activeElement.tagName === 'DIV') {
+        const active = document.activeElement;
+        if (!active || active.tagName === "BODY") {
           barcodeRef.current?.focus();
         }
-      }, 50);
-    }
-  };
+      }, 350);
+    };
 
-  // ৪. ফোকাস আউট হয়ে গেলে যেন হারিয়ে না যায় (স্মার্ট রিটার্ন)
-  const handleBlurLogic = (e) => {
-    // যদি ট্যাব বা অন্য কারণে ফোকাস চলে যায়, তবে ৩৫০ms পর স্ক্যানারে ফিরবে
-    // কিন্তু যদি ইউজার অন্য কোনো ইনপুটে যায়, তবে ফিরবে না
-    setTimeout(() => {
-      const active = document.activeElement;
-      if (!active || active.tagName === "BODY") {
-        barcodeRef.current?.focus();
-      }
-    }, 350);
-  };
+    window.addEventListener("mouseup", handleGlobalClick);
+    // ইনপুট ফিল্ডের ভেতরে টাইপিং এর সময় এই ইভেন্ট যেন ডিস্টার্ব না করে তাই
+    // focusout এর বদলে আমরা শুধু mouseup দিয়ে ফাঁকা জায়গা ট্র্যাক করছি
 
-  window.addEventListener("mouseup", handleGlobalClick);
-  // ইনপুট ফিল্ডের ভেতরে টাইপিং এর সময় এই ইভেন্ট যেন ডিস্টার্ব না করে তাই 
-  // focusout এর বদলে আমরা শুধু mouseup দিয়ে ফাঁকা জায়গা ট্র্যাক করছি
-  
-  return () => {
-    window.removeEventListener("mouseup", handleGlobalClick);
-  };
-}, []);
+    return () => {
+      window.removeEventListener("mouseup", handleGlobalClick);
+    };
+  }, []);
   const getEffectivePrice = (item) => {
     const basePrice = parseFloat(item.price || 0);
     const pv = parseFloat(item.point_value || 0);

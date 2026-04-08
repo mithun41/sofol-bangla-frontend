@@ -1,6 +1,14 @@
 "use client";
 import { useState, useEffect } from "react";
-import { X, CheckCircle2, Loader2, Upload, Banknote, Tag } from "lucide-react";
+import {
+  X,
+  CheckCircle2,
+  Loader2,
+  Upload,
+  Banknote,
+  Tag,
+  Layers,
+} from "lucide-react"; // Layers আইকন যোগ করলাম
 import { getAllCategories, updateProduct } from "@/services/productService";
 import toast from "react-hot-toast";
 
@@ -15,12 +23,22 @@ export default function EditProductModal({
   const [formData, setFormData] = useState({
     name: product?.name || "",
     category: product?.category || "",
-    purchase_price: product?.purchase_price || "", // কেনা দাম
-    price: product?.price || "", // বিক্রি দাম
+    purchase_price: product?.purchase_price || "",
+    price: product?.price || "",
     stock: product?.stock || "",
+    unit_type: product?.unit_type || "piece", // নতুন ফিল্ড: Quantity Type
     description: product?.description || "",
     image: null,
   });
+
+  // Quantity Types এর অপশনগুলো
+  const unitTypes = [
+    { label: "Piece", value: "piece" },
+    { label: "KG", value: "kg" },
+    { label: "Gram", value: "gram" },
+    { label: "Litre", value: "litre" },
+    { label: "Packet", value: "packet" },
+  ];
 
   useEffect(() => {
     getAllCategories().then((res) => setCategories(res.data));
@@ -31,7 +49,6 @@ export default function EditProductModal({
     setFormData((prev) => ({ ...prev, [name]: files ? files[0] : value }));
   };
 
-  // লাইভ পয়েন্ট ক্যালকুলেশন: (বিক্রি দাম - কেনা দাম) / 4
   const calculatedPV = () => {
     const buy = parseFloat(formData.purchase_price) || 0;
     const sell = parseFloat(formData.price) || 0;
@@ -46,9 +63,10 @@ export default function EditProductModal({
     const data = new FormData();
     data.append("name", formData.name);
     data.append("category", formData.category);
-    data.append("purchase_price", formData.purchase_price); // পাঠানো হচ্ছে
-    data.append("price", formData.price); // পাঠানো হচ্ছে
+    data.append("purchase_price", formData.purchase_price);
+    data.append("price", formData.price);
     data.append("stock", formData.stock);
+    data.append("unit_type", formData.unit_type); // পাঠানো হচ্ছে
     data.append("description", formData.description);
 
     if (formData.image) {
@@ -59,12 +77,15 @@ export default function EditProductModal({
       await updateProduct(product.id, data);
       onSuccess();
       onClose();
+      toast.success("Product updated successfully!");
     } catch (err) {
-      toast("Update failed. Please try again.");
+      toast.error("Update failed. Please try again.");
     } finally {
       setLoading(false);
     }
   };
+
+  if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[100] flex items-center justify-center p-4">
@@ -75,8 +96,8 @@ export default function EditProductModal({
             <h2 className="text-xl font-bold dark:text-white line-clamp-1">
               Edit: {product.name}
             </h2>
-            <p className="text-xs text-slate-500 font-medium">
-              Updating inventory details
+            <p className="text-xs text-slate-500 font-medium tracking-tight">
+              Updating inventory and unit specifications
             </p>
           </div>
           <button
@@ -123,6 +144,31 @@ export default function EditProductModal({
               </select>
             </div>
 
+            {/* Quantity Type - নতুন ইনপুট */}
+            <div>
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
+                Quantity Type (Unit)
+              </label>
+              <div className="relative">
+                <Layers
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <select
+                  name="unit_type"
+                  value={formData.unit_type}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 appearance-none"
+                >
+                  {unitTypes.map((type) => (
+                    <option key={type.value} value={type.value}>
+                      {type.label}
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </div>
+
             {/* Stock */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
@@ -133,7 +179,7 @@ export default function EditProductModal({
                 name="stock"
                 value={formData.stock}
                 onChange={handleChange}
-                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none"
+                className="w-full px-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500"
                 required
               />
             </div>

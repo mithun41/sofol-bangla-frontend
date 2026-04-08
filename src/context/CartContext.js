@@ -11,7 +11,7 @@ export const CartProvider = ({ children }) => {
   const getAuthToken = () =>
     typeof window !== "undefined" ? localStorage.getItem("access") : null;
 
-  // ২. অ্যাপ লোড হওয়ার সময় ডাটা নিয়ে আসা (Initial Sync)
+  // ২. অ্যাপ লোড হওয়ার সময় ডাটা নিয়ে আসা
   useEffect(() => {
     const initCart = async () => {
       const token = getAuthToken();
@@ -29,7 +29,8 @@ export const CartProvider = ({ children }) => {
     initCart();
   }, []);
 
-  // ৩. ডাটাবেস থেকে কার্ট আনার ফাংশন (লগইন ইউজারের জন্য)
+  // ৩. ডাটাবেস থেকে কার্ট আনার ফাংশন
+  // ৩. ডাটাবেস থেকে কার্ট আনার ফাংশন
   const fetchDatabaseCart = async (token) => {
     setLoading(true);
     try {
@@ -42,17 +43,26 @@ export const CartProvider = ({ children }) => {
       if (res.ok) {
         const data = await res.json();
 
-        // ব্যাকএন্ড থেকে আসা ডাটাকে ফ্রন্টএন্ডের ফরম্যাটে ম্যাপিং
-        const formattedCart = data.map((item) => ({
-          id: item.product, // প্রোডাক্ট আইডি
-          cartItemId: item.id, // ডাটাবেসের কার্ট রো আইডি
-          name: item.product_name,
-          price: item.product_price,
-          image: item.product_image,
-          quantity: item.quantity,
-          point_value: item.product_pv,
-          item_subtotal: item.item_subtotal, // এইটা মিসিং ছিল মামা! এইটা না থাকলে NaN দেখায়
-        }));
+        const formattedCart = data.map((item) => {
+          // 🚨 মামা এই জায়গাটা খেয়াল কর:
+          // আমরা ব্যাকএন্ডের পাঠানো item_subtotal এর ওপর নির্ভর করব না।
+          // আমরা সরাসরি product_price আর quantity গুণ করে আসল সাবটোটাল বের করব।
+          const originalPrice = Number(item.product_price || 0);
+          const qty = Number(item.quantity || 0);
+
+          return {
+            id: item.product,
+            cartItemId: item.id,
+            name: item.product_name,
+            price: originalPrice, // সব সময় মেইন প্রাইস
+            image: item.product_image,
+            quantity: qty,
+            unit_type: item.unit_type,
+            point_value: Number(item.product_pv || 0),
+            // সাবটোটাল হবে পিওর প্রাইস * কোয়ান্টিটি
+            item_subtotal: originalPrice * qty,
+          };
+        });
         setCart(formattedCart);
       }
     } catch (err) {
@@ -62,7 +72,7 @@ export const CartProvider = ({ children }) => {
     }
   };
 
-  // ৪. গেস্ট কার্ট সিঙ্ক (লগইন ছাড়া ইউজার)
+  // ৪. গেস্ট কার্ট সিঙ্ক
   const syncGuestCart = async (currentCart) => {
     if (!currentCart.length) return;
     try {
@@ -79,14 +89,15 @@ export const CartProvider = ({ children }) => {
         const latestProducts = await response.json();
         const updatedCart = currentCart.map((cartItem) => {
           const dbProduct = latestProducts.find((p) => p.id === cartItem.id);
-          // গেস্ট কার্টেও item_subtotal ক্যালকুলেট করে রাখা ভালো
           if (dbProduct) {
-            const price = dbProduct.price;
+            // 🚨 মেইন প্রাইস নিশ্চিত করা হচ্ছে
+            const originalPrice = Number(dbProduct.price);
             return {
               ...cartItem,
               ...dbProduct,
-              price: price,
-              item_subtotal: price * cartItem.quantity,
+              price: originalPrice,
+              quantity: Number(cartItem.quantity),
+              item_subtotal: originalPrice * Number(cartItem.quantity),
             };
           }
           return cartItem;
@@ -102,6 +113,7 @@ export const CartProvider = ({ children }) => {
   // ৫. কার্টে আইটেম যোগ করা
   const addToCart = async (product, quantity = 1) => {
     const token = getAuthToken();
+    const qtyToAdd = Number(quantity);
 
     if (token) {
       try {
@@ -113,10 +125,9 @@ export const CartProvider = ({ children }) => {
           },
           body: JSON.stringify({
             product: product.id,
-            quantity: quantity,
+            quantity: qtyToAdd,
           }),
         });
-
         fetchDatabaseCart(token);
       } catch (err) {
         console.error(err);
@@ -124,7 +135,6 @@ export const CartProvider = ({ children }) => {
     } else {
       setCart((prev) => {
         const existing = prev.find((i) => i.id === product.id);
-
         let newCart;
 
         if (existing) {
@@ -132,8 +142,8 @@ export const CartProvider = ({ children }) => {
             i.id === product.id
               ? {
                   ...i,
-                  quantity: i.quantity + quantity,
-                  item_subtotal: (i.quantity + quantity) * i.price,
+                  quantity: Number((i.quantity + qtyToAdd).toFixed(3)),
+                  item_subtotal: (i.quantity + qtyToAdd) * i.price,
                 }
               : i,
           );
@@ -142,14 +152,13 @@ export const CartProvider = ({ children }) => {
             ...prev,
             {
               ...product,
-              quantity: quantity,
-              item_subtotal: product.price * quantity,
+              quantity: qtyToAdd,
+              unit_type: product.unit_type,
+              item_subtotal: Number(product.price) * qtyToAdd,
             },
           ];
         }
-
         localStorage.setItem("cart", JSON.stringify(newCart));
-
         return newCart;
       });
     }
@@ -158,14 +167,29 @@ export const CartProvider = ({ children }) => {
   // ৬. কোয়ান্টিটি আপডেট করা (Plus/Minus)
   const updateQuantity = async (id, cartItemId, change) => {
     const token = getAuthToken();
-    const currentItem = cart.find((i) => i.id === id);
+
+    // ১. আইটেমটা খুঁজে বের করা
+    const currentItem = cart.find((i) =>
+      token ? i.cartItemId === cartItemId : i.id === id,
+    );
+
     if (!currentItem) return;
 
-    const newQty = Math.max(1, currentItem.quantity + change);
+    // ২. স্টেপ নির্ধারণ (কেজি হলে ০.২৫, পিস হলে ১)
+    const step = currentItem.unit_type === "kg" ? 0.25 : 1;
+
+    // ৩. নতুন কোয়ান্টিটি ক্যালকুলেশন (Number এবং toFixed ব্যবহার করা মাস্ট)
+    // parseFloat ব্যবহার করছি যাতে স্ট্রিং থাকলেও সেটা নাম্বারে কনভার্ট হয়
+    const currentQty = parseFloat(currentItem.quantity);
+    const newQty = parseFloat((currentQty + change).toFixed(3));
+
+    // ৪. মিনিমাম চেক (স্টেপ এর চেয়ে কম হতে পারবে না)
+    if (newQty < step) return;
 
     if (token && cartItemId) {
       try {
-        await fetch(
+        // ৫. ডাটাবেস আপডেট (PATCH)
+        const res = await fetch(
           `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/${cartItemId}/`,
           {
             method: "PATCH",
@@ -176,15 +200,23 @@ export const CartProvider = ({ children }) => {
             body: JSON.stringify({ quantity: newQty }),
           },
         );
-        fetchDatabaseCart(token);
+
+        if (res.ok) {
+          fetchDatabaseCart(token); // সাকসেস হলে ডাটা রিফ্রেশ
+        }
       } catch (err) {
-        console.error(err);
+        console.error("Update failed:", err);
       }
     } else {
+      // ৬. গেস্ট ইউজারের জন্য লোকাল স্টোরেজ আপডেট
       setCart((prev) => {
         const updated = prev.map((i) =>
           i.id === id
-            ? { ...i, quantity: newQty, item_subtotal: newQty * i.price }
+            ? {
+                ...i,
+                quantity: newQty,
+                item_subtotal: (newQty * i.price).toFixed(2),
+              }
             : i,
         );
         localStorage.setItem("cart", JSON.stringify(updated));
@@ -222,14 +254,18 @@ export const CartProvider = ({ children }) => {
   const clearCart = async () => {
     const token = getAuthToken();
     if (token) {
-      await fetch(
-        `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/clear/`,
-        {
-          method: "DELETE",
-          headers: { Authorization: `Bearer ${token}` },
-        },
-      );
-      setCart([]);
+      try {
+        await fetch(
+          `${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/clear/`,
+          {
+            method: "DELETE",
+            headers: { Authorization: `Bearer ${token}` },
+          },
+        );
+        setCart([]);
+      } catch (err) {
+        console.error(err);
+      }
     } else {
       setCart([]);
       localStorage.removeItem("cart");
@@ -250,7 +286,7 @@ export const CartProvider = ({ children }) => {
       {children}
     </CartContext.Provider>
   );
-};
+};;
 
 export const useCart = () => {
   const context = useContext(CartContext);

@@ -11,7 +11,11 @@ export default function CartTable({
   formatBDT,
   selectedCustomer,
 }) {
-  const isMember = selectedCustomer?.status?.toLowerCase() === "active";
+  // CartTable.jsx এর ভেতরে
+ const isMember =
+   selectedCustomer &&
+   selectedCustomer.id &&
+   selectedCustomer.status?.toLowerCase() === "active";
 
   return (
     <div className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden flex-1 flex flex-col min-h-[500px]">
@@ -151,9 +155,7 @@ export default function CartTable({
                     {/* Remove */}
                     <td className="px-5 py-4 text-right">
                       <button
-                        onClick={() =>
-                          removeFromCart(item.id, item.cartItemId)
-                        }
+                        onClick={() => removeFromCart(item.id, item.cartItemId)}
                         className="p-1.5 rounded-lg text-slate-200 hover:text-rose-500 hover:bg-rose-50 transition-all opacity-0 group-hover:opacity-100"
                       >
                         <Trash2 size={14} />

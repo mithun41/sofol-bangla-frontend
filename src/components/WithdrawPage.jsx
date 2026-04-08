@@ -38,10 +38,10 @@ export default function WithdrawPage() {
 
     setLoading(true);
     try {
-      await api.post("accounts/withdraw-request/", {
+      await api.post("accounts/withdrawals/", {
         amount: amount,
         method: method,
-        account_number: accountNumber,
+        account_details: accountNumber,
       });
       setMessage("Request submitted successfully!");
       setAmount("");

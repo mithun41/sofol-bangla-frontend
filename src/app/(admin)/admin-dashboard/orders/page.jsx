@@ -1,5 +1,5 @@
 "use client";
-import React, { useEffect, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import api from "@/services/api";
 import Swal from "sweetalert2";
 import {
@@ -28,7 +28,10 @@ import {
   BadgeDollarSign,
   CircleDollarSign,
   ShieldCheck,
+  Printer,
 } from "lucide-react";
+import ShippingLabel from "./ShippingLabel";
+import { useReactToPrint } from "react-to-print";
 
 const ORDERS_PER_PAGE = 20;
 
@@ -209,7 +212,13 @@ export default function AdminOrdersPage() {
   const [searchTerm, setSearchTerm] = useState("");
   const [currentPage, setCurrentPage] = useState(1);
   const [statusFilter, setStatusFilter] = useState("All");
+  const printRef = useRef(null);
 
+  // এটাকে এভাবে পরিবর্তন কর:
+  const handlePrint = useReactToPrint({
+    contentRef: printRef, // 'content' এর বদলে 'contentRef' হবে
+    documentTitle: `Label_${selectedOrder?.order_number}`,
+  });
   const fetchOrders = async () => {
     try {
       const res = await api.get("orders/admin-list/");
@@ -592,7 +601,15 @@ export default function AdminOrdersPage() {
                     </span>
                   </div>
                 </div>
-
+                <div className="p-4 border-t flex justify-end">
+                  <button
+                    onClick={handlePrint}
+                    className="flex items-center gap-2 bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg active:scale-95"
+                  >
+                    <Printer size={18} />
+                    Print Shipping Sticker
+                  </button>
+                </div>
                 <button
                   onClick={() => setSelectedOrder(null)}
                   className="w-10 h-10 flex items-center justify-center rounded-xl bg-white/10 hover:bg-rose-500 text-white transition-all"
@@ -779,6 +796,9 @@ export default function AdminOrdersPage() {
           </div>
         </div>
       )}
+      <div style={{ display: "none" }}>
+        <ShippingLabel ref={printRef} order={selectedOrder} />
+      </div>
     </div>
   );
 }

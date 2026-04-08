@@ -1,96 +1,104 @@
 "use client";
-import { useState } from "react";
+import { useState, useRef, useEffect } from "react";
 import api from "@/services/api";
+import { ZoomIn, ZoomOut, Move, Search, Layers } from "lucide-react";
 
-const TreeNode = ({ node, onNodeClick }) => {
+const TreeNode = ({ node, onNodeClick, maxLevel, viewMode }) => {
   const [isHovered, setIsHovered] = useState(false);
 
-  if (!node) {
-    return (
-      <div className="flex flex-col items-center mt-2 opacity-30">
-        <div className="w-6 h-6 rounded-full border border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-          <span className="text-[6px] text-gray-400">-</span>
-        </div>
-      </div>
-    );
-  }
+  // যদি নোড না থাকে অথবা ইউজারের সিলেক্ট করা লেভেলের বাইরে চলে যায় তবে দেখাবে না
+  if (!node || node.level > maxLevel) return null;
+
+  const shouldShowMember = viewMode === "full" || node.level === maxLevel;
 
   return (
-    <div className="flex flex-col items-center">
-      {/* User Node */}
-      <div className="relative">
-        <div
-          onClick={() => onNodeClick(node.username)}
-          onMouseEnter={() => setIsHovered(true)}
-          onMouseLeave={() => setIsHovered(false)}
-          className={`w-10 h-10 rounded-full flex flex-col items-center justify-center text-white shadow-md cursor-pointer transform hover:scale-110 transition-all duration-150 border-2 relative ${
-            node.status === "active"
-              ? "bg-emerald-500 border-emerald-200"
-              : "bg-rose-400 border-rose-200"
-          }`}
-        >
-          {/* Username (First 4 chars) */}
-          <span className="text-[8px] font-black leading-none uppercase">
-            {node.username.slice(0, 6)}
-          </span>
+    <div className="flex flex-col items-center animate-fadeIn">
+      {shouldShowMember ? (
+        <div className="relative group">
+          {/* প্রোফাইল পিকচার এবং গোল কার্ড */}
+          <div
+            onClick={() => onNodeClick(node.username)}
+            onMouseEnter={() => setIsHovered(true)}
+            onMouseLeave={() => setIsHovered(false)}
+            className={`w-10 h-10 rounded-full overflow-hidden shadow-xl cursor-pointer transform hover:scale-125 transition-all duration-300 border-4 relative z-10 ${
+              node.status === "active"
+                ? "border-emerald-400 ring-2 ring-emerald-50"
+                : "border-rose-400 ring-2 ring-rose-50"
+            }`}
+          >
+            <img
+              src={node.profile_picture || "/default-avatar.png"}
+              alt={node.username}
+              className="w-full h-full object-cover"
+            />
+          </div>
 
-          {/* Division (Replacing ID) */}
-          <span className="text-[6px] opacity-90 leading-none mt-1 font-bold">
-            {node.division ? node.division.slice(0, 5) : "N/A"}
-          </span>
+          {/* লেভেল ট্যাগ */}
+          <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-slate-900 text-white text-[7px] font-black px-1.5 py-0.5 rounded-full shadow-lg z-20 border border-slate-700">
+            L{node.level}
+          </div>
+
+          {/* ইউজারনেম */}
+          <div className="mt-1 flex flex-col items-center">
+            <span className="text-[8px] font-black text-slate-800 uppercase tracking-tighter">
+              {node.username.slice(0, 7)}
+            </span>
+          </div>
+
+          {/* Tooltip */}
+          {isHovered && (
+            <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-3 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-xl whitespace-nowrap z-50 shadow-2xl border border-slate-700">
+              <div className="font-bold text-indigo-300 border-b border-slate-700 pb-1 mb-1 text-center">
+                {node.username}
+              </div>
+              <div className="flex flex-col gap-0.5">
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-400">Position:</span>
+                  <span className="font-bold text-emerald-400 uppercase">
+                    {node.position || "Root"}
+                  </span>
+                </div>
+                <div className="flex justify-between gap-4">
+                  <span className="text-slate-400">Status:</span>
+                  <span
+                    className={`${node.status === "active" ? "text-emerald-400" : "text-rose-400"}`}
+                  >
+                    {node.status}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
         </div>
+      ) : (
+        <div className="w-2 h-2 bg-slate-200 rounded-full mb-2"></div>
+      )}
 
-        {/* Enhanced Hover Tooltip */}
-        {isHovered && (
-          <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 px-3 py-2 bg-slate-900 text-white text-[10px] rounded-lg whitespace-nowrap z-50 shadow-2xl animate-fadeIn border border-slate-700">
-            <div className="font-bold text-indigo-300 border-b border-slate-700 pb-1 mb-1">
-              {node.username}
-            </div>
-            <div className="flex flex-col gap-0.5">
-              <div className="text-[9px]">
-                <span className="text-slate-400">Division:</span>{" "}
-                <span className="text-emerald-400 font-bold">
-                  {node.division || "Not Set"}
-                </span>
-              </div>
-              <div className="text-[9px]">
-                <span className="text-slate-400">Status:</span>{" "}
-                <span
-                  className={
-                    node.status === "active"
-                      ? "text-emerald-400"
-                      : "text-rose-400"
-                  }
-                >
-                  {node.status === "active" ? "✓ Active" : "✗ Inactive"}
-                </span>
-              </div>
-              <div className="text-[8px] text-slate-500 italic mt-1">
-                Click to explore this branch
-              </div>
-            </div>
-            {/* Tooltip Arrow */}
-            <div className="absolute top-full left-1/2 -translate-x-1/2 w-0 h-0 border-l-4 border-r-4 border-t-4 border-transparent border-t-slate-900"></div>
-          </div>
-        )}
-      </div>
-
-      {/* Children Branches */}
-      {(node.left || node.right) && (
+      {/* কানেক্টিং লাইনস এবং চিলড্রেন রেন্ডারিং */}
+      {(node.left || node.right) && node.level < maxLevel && (
         <div className="flex gap-4 md:gap-8 mt-4 relative">
-          {/* Horizontal connecting line */}
-          <div className="absolute top-[-8px] left-1/2 w-[60%] h-[1px] bg-gray-300 -translate-x-1/2"></div>
+          <div className="absolute top-[-10px] left-1/2 w-[65%] h-[1px] bg-slate-300 -translate-x-1/2"></div>
 
-          {/* Left Branch */}
+          {/* বাম পাশের চাইল্ড */}
           <div className="relative">
-            <div className="absolute top-[-8px] left-1/2 w-[1px] h-[8px] bg-gray-300"></div>
-            <TreeNode node={node.left} onNodeClick={onNodeClick} />
+            <div className="absolute top-[-10px] left-1/2 w-[1px] h-[10px] bg-slate-300"></div>
+            <TreeNode
+              node={node.left}
+              onNodeClick={onNodeClick}
+              maxLevel={maxLevel}
+              viewMode={viewMode}
+            />
           </div>
 
-          {/* Right Branch */}
+          {/* ডান পাশের চাইল্ড */}
           <div className="relative">
-            <div className="absolute top-[-8px] left-1/2 w-[1px] h-[8px] bg-gray-300"></div>
-            <TreeNode node={node.right} onNodeClick={onNodeClick} />
+            <div className="absolute top-[-10px] left-1/2 w-[1px] h-[10px] bg-slate-300"></div>
+            <TreeNode
+              node={node.right}
+              onNodeClick={onNodeClick}
+              maxLevel={maxLevel}
+              viewMode={viewMode}
+            />
           </div>
         </div>
       )}
@@ -98,169 +106,214 @@ const TreeNode = ({ node, onNodeClick }) => {
   );
 };
 
-// Recursive function to fetch complete tree
-const fetchCompleteTree = async (username) => {
-  if (!username) return null;
-  try {
-    const res = await api.get(`accounts/tree/${username}/`);
-    const node = res.data;
-
-    if (node) {
-      const [leftTree, rightTree] = await Promise.all([
-        node.left?.username
-          ? fetchCompleteTree(node.left.username)
-          : Promise.resolve(null),
-        node.right?.username
-          ? fetchCompleteTree(node.right.username)
-          : Promise.resolve(null),
-      ]);
-
-      return { ...node, left: leftTree, right: rightTree };
-    }
-    return node;
-  } catch (err) {
-    console.error(`Error fetching tree:`, err);
-    return null;
-  }
-};
-
-export default function CompactFullTreeView() {
+export default function EnhancedTreeView() {
   const [treeData, setTreeData] = useState(null);
   const [search, setSearch] = useState("");
   const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
-  const [totalNodes, setTotalNodes] = useState(0);
+  const [maxLevel, setMaxLevel] = useState(4); // ডিফল্ট ভিউ ৪ লেভেল
+  const [viewMode, setViewMode] = useState("full");
   const [zoom, setZoom] = useState(100);
 
-  const countNodes = (node) => {
-    if (!node) return 0;
-    return 1 + countNodes(node.left) + countNodes(node.right);
+  const scrollRef = useRef(null);
+  const [isDragging, setIsDragging] = useState(false);
+  const [dragState, setDragState] = useState({
+    startX: 0,
+    startY: 0,
+    scrollLeft: 0,
+    scrollTop: 0,
+  });
+
+  // ড্র্যাগ করে স্ক্রল করার লজিক
+  const onMouseDown = (e) => {
+    setIsDragging(true);
+    setDragState({
+      startX: e.pageX - scrollRef.current.offsetLeft,
+      startY: e.pageY - scrollRef.current.offsetTop,
+      scrollLeft: scrollRef.current.scrollLeft,
+      scrollTop: scrollRef.current.scrollTop,
+    });
   };
 
-  const fetchTree = async (username) => {
-    const targetUser = username || search;
-    if (!targetUser.trim()) {
-      setErrorMessage("Please enter a username.");
-      return;
-    }
+  const onMouseMove = (e) => {
+    if (!isDragging) return;
+    e.preventDefault();
+    const x = e.pageX - scrollRef.current.offsetLeft;
+    const y = e.pageY - scrollRef.current.offsetTop;
+    const walkX = (x - dragState.startX) * 1.5;
+    const walkY = (y - dragState.startY) * 1.5;
+    scrollRef.current.scrollLeft = dragState.scrollLeft - walkX;
+    scrollRef.current.scrollTop = dragState.scrollTop - walkY;
+  };
 
-    setLoading(true);
-    setErrorMessage("");
+  // আনলিমিটেড লেভেল ফেচ করার রিকাসিভ ফাংশন
+  const fetchCompleteTree = async (username, currentLevel = 0) => {
+    if (!username) return null;
     try {
-      const completeTree = await fetchCompleteTree(targetUser);
-      setTreeData(completeTree);
-      setTotalNodes(countNodes(completeTree));
-      setSearch(targetUser);
-    } catch (err) {
-      setTreeData(null);
-      setErrorMessage("User not found or API error.");
-    } finally {
-      setLoading(false);
+      const res = await api.get(`accounts/tree/${username}/`);
+      const node = res.data;
+      if (node) {
+        // এখানে কোনো লেভেল লিমিট নেই, ডাটা থাকলে ফেচ হতেই থাকবে
+        const [l, r] = await Promise.all([
+          node.left?.username
+            ? fetchCompleteTree(node.left.username, currentLevel + 1)
+            : null,
+          node.right?.username
+            ? fetchCompleteTree(node.right.username, currentLevel + 1)
+            : null,
+        ]);
+        return { ...node, level: currentLevel, left: l, right: r };
+      }
+      return null;
+    } catch {
+      return null;
     }
+  };
+
+  const fetchTree = async (targetUsername) => {
+    const user = targetUsername || search;
+    if (!user || !user.trim()) return;
+    setLoading(true);
+    const data = await fetchCompleteTree(user);
+    setTreeData(data);
+    setLoading(false);
   };
 
   return (
-    <div className="p-4 bg-slate-50 min-h-screen">
-      <style jsx>{`
-        @keyframes fadeIn {
-          from {
-            opacity: 0;
-            transform: translate(-50%, -4px);
-          }
-          to {
-            opacity: 1;
-            transform: translate(-50%, 0);
-          }
-        }
-        .animate-fadeIn {
-          animation: fadeIn 0.2s ease-out;
-        }
-      `}</style>
-
-      <div className="max-w-6xl mx-auto flex flex-col items-center">
-        {/* Search Bar & Controls */}
-        <div className="bg-white p-4 rounded-2xl shadow-md border border-slate-200 flex flex-wrap items-center justify-center gap-4 mb-6 w-full max-w-2xl">
-          <div className="flex items-center gap-2 bg-slate-100 rounded-xl px-3 py-1 border border-slate-200 focus-within:ring-2 focus-within:ring-indigo-500 transition-all">
-            <span className="text-slate-400 text-sm font-bold">@</span>
+    <div className="p-4 bg-slate-50 min-h-screen font-sans overflow-hidden">
+      <div className="max-w-7xl mx-auto">
+        {/* Control Bar */}
+        <div className="bg-white/80 backdrop-blur p-4 rounded-[2rem] shadow-xl border border-slate-100 mb-6 flex flex-wrap items-center justify-between gap-4 relative z-30">
+          {/* সার্চ বক্স */}
+          <div className="flex items-center gap-2 bg-slate-100 px-3 py-1.5 rounded-2xl border">
+            <Search size={14} className="text-slate-400" />
             <input
-              type="text"
-              placeholder="Username"
-              className="bg-transparent p-2 text-slate-800 text-sm outline-none w-32 md:w-48 font-semibold"
+              placeholder="Username..."
+              className="bg-transparent outline-none font-bold text-xs w-24"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               onKeyDown={(e) => e.key === "Enter" && fetchTree()}
             />
+            <button
+              onClick={() => fetchTree()}
+              className="bg-indigo-600 text-white px-3 py-1 rounded-xl text-[9px] font-black hover:bg-indigo-700 transition-colors"
+            >
+              {loading ? "FETCHING..." : "SEARCH"}
+            </button>
           </div>
 
-          <button
-            onClick={() => fetchTree()}
-            disabled={loading}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl text-sm font-bold shadow-lg shadow-indigo-100 active:scale-95 disabled:bg-slate-300 transition-all"
-          >
-            {loading ? "Searching..." : "View Tree"}
-          </button>
+          {/* ভিউ মোড */}
+          <div className="flex gap-1 bg-slate-100 p-1 rounded-2xl border">
+            <button
+              onClick={() => setViewMode("full")}
+              className={`px-3 py-1 rounded-xl text-[9px] font-black transition-all ${viewMode === "full" ? "bg-white shadow text-indigo-600" : "text-slate-400"}`}
+            >
+              FULL TREE
+            </button>
+            <button
+              onClick={() => setViewMode("isolated")}
+              className={`px-3 py-1 rounded-xl text-[9px] font-black transition-all ${viewMode === "isolated" ? "bg-white shadow text-indigo-600" : "text-slate-400"}`}
+            >
+              BY LEVEL
+            </button>
+          </div>
 
-          {treeData && (
-            <div className="flex items-center gap-3 border-l pl-4">
-              <button
-                onClick={() => setZoom(Math.max(40, zoom - 10))}
-                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold"
-              >
-                -
-              </button>
-              <span className="text-[11px] font-black text-slate-500 min-w-[35px] text-center">
-                {zoom}%
-              </span>
-              <button
-                onClick={() => setZoom(Math.min(150, zoom + 10))}
-                className="w-8 h-8 bg-slate-100 hover:bg-slate-200 rounded-lg text-slate-600 font-bold"
-              >
-                +
-              </button>
-            </div>
-          )}
+          {/* জুম কন্ট্রোল */}
+          <div className="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl border">
+            <button
+              onClick={() => setZoom((z) => Math.max(20, z - 10))}
+              className="p-1.5 hover:bg-white rounded-lg"
+            >
+              <ZoomOut size={14} />
+            </button>
+            <span className="text-[10px] font-bold w-10 text-center">
+              {zoom}%
+            </span>
+            <button
+              onClick={() => setZoom((z) => Math.min(200, z + 10))}
+              className="p-1.5 hover:bg-white rounded-lg"
+            >
+              <ZoomIn size={14} />
+            </button>
+          </div>
+
+          {/* লেভেল ফিল্টার (এখানে ২০ লেভেল পর্যন্ত সেট করা হয়েছে) */}
+          <div className="flex items-center gap-3 bg-slate-100 px-4 py-2 rounded-2xl border">
+            <Layers size={14} className="text-indigo-600" />
+            <input
+              type="range"
+              min="0"
+              max="50" // তোমার চাহিদা অনুযায়ী এখানে ২০ বা তার বেশি দিতে পারো
+              value={maxLevel}
+              onChange={(e) => setMaxLevel(parseInt(e.target.value))}
+              className="w-32 h-1 accent-indigo-600 cursor-pointer"
+            />
+            <span className="text-[10px] font-bold text-indigo-600 min-w-[20px]">
+              L{maxLevel}
+            </span>
+          </div>
         </div>
 
-        {/* Info & Errors */}
-        {errorMessage && (
-          <div className="mb-4 text-rose-500 text-xs font-bold bg-rose-50 px-4 py-2 rounded-lg border border-rose-100">
-            {errorMessage}
-          </div>
-        )}
-
-        {treeData && !loading && (
-          <div className="mb-6 flex gap-4">
-            <div className="bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm text-[11px] font-bold text-slate-600">
-              🌳 Total Network:{" "}
-              <span className="text-indigo-600">{totalNodes}</span>
-            </div>
-          </div>
-        )}
-
-        {/* Tree Visualizer */}
-        {treeData ? (
-          <div className="w-full bg-white rounded-3xl shadow-2xl border border-slate-100 p-8 overflow-auto scrollbar-hide min-h-[600px] flex justify-center items-start">
+        {/* Tree Canvas */}
+        <div
+          ref={scrollRef}
+          onMouseDown={onMouseDown}
+          onMouseLeave={() => setIsDragging(false)}
+          onMouseUp={() => setIsDragging(false)}
+          onMouseMove={onMouseMove}
+          className={`bg-white rounded-[3rem] shadow-inner border border-slate-100 p-10 overflow-auto min-h-[700px] flex justify-center items-start scrollbar-hide relative z-10 cursor-grab ${isDragging ? "cursor-grabbing" : ""}`}
+        >
+          {treeData ? (
             <div
               style={{
                 transform: `scale(${zoom / 100})`,
                 transformOrigin: "top center",
-                transition: "transform 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+                transition: "transform 0.2s ease-out",
               }}
+              className="pt-10 pb-40"
             >
-              <TreeNode node={treeData} onNodeClick={fetchTree} />
+              <TreeNode
+                node={treeData}
+                onNodeClick={(clickedUser) => fetchTree(clickedUser)}
+                maxLevel={maxLevel}
+                viewMode={viewMode}
+              />
             </div>
-          </div>
-        ) : (
-          !loading && (
-            <div className="mt-20 text-center opacity-20">
-              <div className="text-6xl mb-4">🌳</div>
-              <p className="text-xl font-bold italic text-slate-800 uppercase tracking-widest">
-                Search a username to load tree
+          ) : (
+            <div className="mt-48 flex flex-col items-center gap-4">
+              <div className="text-slate-200 text-6xl font-black italic tracking-tighter uppercase opacity-50">
+                Binary Tree
+              </div>
+              <p className="text-slate-400 text-xs font-medium">
+                Enter a username to visualize the network
               </p>
             </div>
-          )
-        )}
+          )}
+        </div>
       </div>
+
+      {/* CSS for hiding scrollbars */}
+      <style jsx global>{`
+        .scrollbar-hide::-webkit-scrollbar {
+          display: none;
+        }
+        .scrollbar-hide {
+          -ms-overflow-style: none;
+          scrollbar-width: none;
+        }
+        @keyframes fadeIn {
+          from {
+            opacity: 0;
+            transform: translateY(10px);
+          }
+          to {
+            opacity: 1;
+            transform: translateY(0);
+          }
+        }
+        .animate-fadeIn {
+          animation: fadeIn 0.4s ease-out forwards;
+        }
+      `}</style>
     </div>
   );
 }

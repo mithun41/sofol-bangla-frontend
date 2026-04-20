@@ -3,9 +3,11 @@ import { useState } from "react";
 import { useAuth } from "@/context/AuthContext";
 import { authService } from "@/services/authService";
 import toast from "react-hot-toast";
+import { useRouter } from "next/navigation";
 
 export default function LoginPage() {
   const { login } = useAuth();
+  const router = useRouter();
 
   // মোড সমূহ: login, forgot (Username+Phone), verify (OTP Check), final (New Password)
   const [mode, setMode] = useState("login");
@@ -24,11 +26,26 @@ export default function LoginPage() {
     e.preventDefault();
     setSubmitting(true);
     setError("");
+
     const result = await login({
       username: formData.username,
       password: formData.password,
     });
-    if (!result.success) {
+
+    if (result.success) {
+      // লগইন সফল হলে ইউজারের রোল চেক করুন
+      const userRole = result.user?.role;
+
+      if (userRole === "posAdmin") {
+        toast.success("Welcome to POS System!");
+        router.push("/pos/pos"); // posAdmin হলে এখানে যাবে
+      } else if (userRole === "admin") {
+        toast.success("Welcome Admin!");
+        router.push("/admin-dashboard"); // মেইন এডমিন হলে এখানে যাবে
+      } else {
+        router.push("/"); // অন্য ইউজার বা কাস্টমার হলে
+      }
+    } else {
       setError(result.error);
       setSubmitting(false);
     }

@@ -11,6 +11,7 @@ import {
   CheckCircle2,
   ChevronLeft,
   Check,
+  AlertTriangle,
 } from "lucide-react";
 import Link from "next/link";
 import { orderService } from "@/services/order";
@@ -53,11 +54,9 @@ export default function CheckoutPage() {
   const subtotal = cart.reduce((acc, item) => {
     const basePrice = Number(item.price || 0);
     const pv = Number(item.point_value || 0);
-
     const effectivePrice = isActiveMember
       ? Math.max(0, basePrice - pv * 2)
       : basePrice;
-
     return acc + effectivePrice * item.quantity;
   }, 0);
 
@@ -98,7 +97,6 @@ export default function CheckoutPage() {
         };
       }),
       subtotal: subtotal,
-      // ❌ shipping_cost সরিয়ে ফেলা হয়েছে
       total_amount: total,
       payment_method: paymentMethod,
       sender_number: paymentMethod === "cod" ? "" : formData.senderNumber,
@@ -106,20 +104,37 @@ export default function CheckoutPage() {
     };
 
     try {
+      // API Call
       const res = await orderService.placeOrder(orderData);
 
       if (res && res.order_id) {
+        toast.success("অর্ডারটি সফলভাবে গ্রহণ করা হয়েছে!");
         clearCart();
         router.push(`/order-success?id=${res.order_id}`);
       } else {
-        toast("Order processed but ID not found.");
+        throw new Error("Invalid response from server");
       }
     } catch (error) {
-      const errorMessage =
+      // গুরুত্বপূর্ণ: এখানে আমরা এরর মেসেজটি এক্সট্রাক্ট করছি
+      console.error("Submission Error:", error);
+
+      // ব্যাকেন্ড থেকে আসা এরর মেসেজ ধরার সঠিক উপায়
+      const serverErrorMessage =
         error.response?.data?.error ||
-        "Order failed! Please check your information.";
-      toast(errorMessage);
-      console.error("Order Error:", error);
+        error.response?.data?.message ||
+        "অর্ডারটি সম্পন্ন করা সম্ভব হয়নি।";
+
+      // টোস্ট মেসেজ দেখানো
+      toast.error(serverErrorMessage, {
+        duration: 5000,
+        icon: <AlertTriangle className="text-red-500" />,
+        style: {
+          border: "1px solid #FF620A",
+          padding: "16px",
+          color: "#1e293b",
+          fontWeight: "bold",
+        },
+      });
     } finally {
       setOrderLoading(false);
     }
@@ -162,12 +177,11 @@ export default function CheckoutPage() {
           >
             <ChevronLeft size={18} /> Back to Cart
           </Link>
-
           <h1 className="text-3xl md:text-4xl font-black text-slate-900">
             Checkout
           </h1>
           <p className="text-slate-500 mt-2 text-sm md:text-base">
-            Complete your order by providing shipping and payment details.
+            Complete your order details below.
           </p>
         </div>
 
@@ -185,7 +199,6 @@ export default function CheckoutPage() {
                   Shipping Details
                 </h3>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-600">
@@ -196,10 +209,9 @@ export default function CheckoutPage() {
                     name="name"
                     value={formData.name}
                     onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] transition"
                   />
                 </div>
-
                 <div className="space-y-2">
                   <label className="text-sm font-bold text-slate-600">
                     Phone Number
@@ -209,32 +221,10 @@ export default function CheckoutPage() {
                     name="phone"
                     value={formData.phone}
                     onChange={handleInputChange}
-                    placeholder="017XXXXXXXX"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] transition"
                   />
                 </div>
-
                 <div className="space-y-2 md:col-span-2">
-                  <label className="text-sm font-bold text-slate-600">
-                    Select Courier Service
-                  </label>
-                  <select
-                    name="courier"
-                    value={formData.courier}
-                    onChange={handleInputChange}
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition"
-                  >
-                    <option value="Sundarban Courier">
-                      Sundarban Courier Service
-                    </option>
-                    <option value="SA Paribahan">SA Paribahan</option>
-                    <option value="Steadfast Courier">Steadfast Courier</option>
-                    <option value="Pathao Courier">Pathao Courier</option>
-                    <option value="RedX">RedX Delivery</option>
-                    <option value="Korotoa Courier">Korotoa Courier</option>
-                  </select>
-                </div>
-                <div className="md:col-span-2 space-y-2">
                   <label className="text-sm font-bold text-slate-600">
                     Full Address
                   </label>
@@ -243,9 +233,8 @@ export default function CheckoutPage() {
                     name="address"
                     value={formData.address}
                     onChange={handleInputChange}
-                    rows="4"
-                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] focus:border-transparent transition resize-none"
-                    placeholder="House/Road/Area details..."
+                    rows="3"
+                    className="w-full px-4 py-3 rounded-xl border border-slate-200 bg-slate-50 outline-none focus:ring-2 focus:ring-[#FF620A] transition resize-none"
                   ></textarea>
                 </div>
               </div>
@@ -260,18 +249,13 @@ export default function CheckoutPage() {
                   Payment Method
                 </h3>
               </div>
-
               <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
                 {["cod", "bkash", "nagad"].map((method) => (
                   <button
-                    type="button"
                     key={method}
+                    type="button"
                     onClick={() => setPaymentMethod(method)}
-                    className={`relative p-4 border-2 rounded-2xl text-center transition-all ${
-                      paymentMethod === method
-                        ? "border-[#FF620A] bg-[#FF620A]/5 shadow-sm"
-                        : "border-slate-200 hover:border-[#FF620A]/40"
-                    }`}
+                    className={`relative p-4 border-2 rounded-2xl text-center transition-all ${paymentMethod === method ? "border-[#FF620A] bg-[#FF620A]/5 shadow-sm" : "border-slate-200 hover:border-[#FF620A]/40"}`}
                   >
                     <span className="text-sm font-black uppercase text-slate-800">
                       {method === "cod" ? "Cash on Delivery" : method}
@@ -285,40 +269,6 @@ export default function CheckoutPage() {
                   </button>
                 ))}
               </div>
-
-              {paymentMethod !== "cod" && (
-                <div className="p-6 bg-slate-900 rounded-2xl text-white space-y-4">
-                  <p className="text-sm text-slate-300">
-                    Send Money to (Bkash):
-                    <span className="font-bold text-[#FF620A] mx-1">
-                      01631-072225
-                    </span>
-                    Or Nagad:
-                    <span className="font-bold text-[#FF620A] mx-1">
-                      01710-855197
-                    </span>
-                  </p>
-
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                    <input
-                      required={paymentMethod !== "cod"}
-                      name="senderNumber"
-                      value={formData.senderNumber}
-                      onChange={handleInputChange}
-                      placeholder="Your BKash/Nagad Number"
-                      className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 outline-none focus:ring-2 focus:ring-[#FF620A]"
-                    />
-                    <input
-                      required={paymentMethod !== "cod"}
-                      name="transactionId"
-                      value={formData.transactionId}
-                      onChange={handleInputChange}
-                      placeholder="Transaction ID"
-                      className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/15 outline-none focus:ring-2 focus:ring-[#FF620A]"
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 
@@ -327,7 +277,6 @@ export default function CheckoutPage() {
               <h3 className="text-xl font-black mb-6 text-slate-900">
                 Order Summary
               </h3>
-
               <div className="space-y-4 mb-6 max-h-[320px] overflow-y-auto pr-1">
                 {cart.map((item) => {
                   const basePrice = Number(item.price || 0);
@@ -335,7 +284,6 @@ export default function CheckoutPage() {
                   const finalPrice = isActiveMember
                     ? Math.max(0, basePrice - pv * 2)
                     : basePrice;
-
                   return (
                     <div
                       key={item.id}
@@ -356,16 +304,10 @@ export default function CheckoutPage() {
                           </p>
                         </div>
                       </div>
-
                       <div className="text-right shrink-0">
                         <p className="text-sm font-black text-slate-900">
                           ৳{finalPrice * item.quantity}
                         </p>
-                        {isActiveMember && pv > 0 && (
-                          <p className="text-[9px] text-[#FF620A] font-bold">
-                            MEMBERSHIP APPLIED
-                          </p>
-                        )}
                       </div>
                     </div>
                   );
@@ -379,21 +321,6 @@ export default function CheckoutPage() {
                     {totalPV}
                   </span>
                 </div>
-
-                {isActiveMember && (
-                  <div className="bg-[#FF620A]/5 p-3 rounded-xl border border-[#FF620A]/15 flex gap-2 items-start mb-2">
-                    <Check
-                      className="text-[#FF620A] mt-0.5"
-                      size={14}
-                      strokeWidth={3}
-                    />
-                    <p className="text-[11px] text-slate-700 font-semibold leading-tight">
-                      As an active member, you are receiving a cash discount.
-                      That is why no PV will be added for this order.
-                    </p>
-                  </div>
-                )}
-
                 <div className="flex justify-between items-center pt-3 text-slate-900 border-t border-slate-100">
                   <span className="text-lg font-bold">Total Amount</span>
                   <span className="text-3xl font-black text-[#FF620A]">
@@ -405,7 +332,7 @@ export default function CheckoutPage() {
               <button
                 type="submit"
                 disabled={orderLoading}
-                className="w-full bg-[#FF620A] text-white py-4 md:py-5 rounded-2xl font-black text-base md:text-lg hover:bg-[#e55a00] transition-all flex items-center justify-center gap-3 disabled:opacity-70"
+                className="w-full bg-[#FF620A] text-white py-4 md:py-5 rounded-2xl font-black text-base md:text-lg hover:bg-[#e55a00] transition-all flex items-center justify-center gap-3 disabled:opacity-70 disabled:cursor-not-allowed shadow-lg shadow-[#FF620A]/20"
               >
                 {orderLoading ? (
                   <Loader2 className="animate-spin" />

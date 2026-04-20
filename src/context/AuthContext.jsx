@@ -17,15 +17,20 @@ export const AuthProvider = ({ children }) => {
       const userData = res.data;
       setUser(userData);
 
-      // কুকিতে রোল আপডেট করুন (মিডলওয়্যারের জন্য)
       Cookies.set("role", userData.role, { expires: 7 });
 
-      // গুরুত্বপূর্ণ: যদি এডমিন ভুল করে /dashboard এ থাকে, তাকে সরিয়ে দিন
-      if (
-        userData.role === "admin" &&
-        window.location.pathname === "/dashboard"
-      ) {
+      // রিডাইরেক্ট সেফটি চেক
+      const path = window.location.pathname;
+
+      if (userData.role === "admin" && path === "/dashboard") {
         router.replace("/admin-dashboard");
+      }
+      // ✅ যদি posAdmin ভুল করে অ্যাডমিন ড্যাশবোর্ডের মেইন পেজে ঢোকে, তাকে POS-এ পাঠান
+      else if (
+        userData.role === "posAdmin" &&
+        window.location.pathname === "/"
+      ) {
+        router.replace("/pos/pos");
       }
     } catch (err) {
       logout();
@@ -49,7 +54,6 @@ export const AuthProvider = ({ children }) => {
       const res = await api.post("accounts/login/", credentials);
       const { access, refresh, role } = res.data;
 
-      // টোকেন এবং রোল কুকিতে সেট করা (Middleware এর জন্য এটিই সবথেকে জরুরি)
       Cookies.set("token", access, { expires: 7 });
       Cookies.set("role", role, { expires: 7 });
 
@@ -58,9 +62,11 @@ export const AuthProvider = ({ children }) => {
 
       await fetchProfile();
 
-      // সরাসরি রিডাইরেক্ট
+      // ✅ আপনার রাউট অনুযায়ী রিডাইরেক্ট
       if (role === "admin") {
         router.push("/admin-dashboard");
+      } else if (role === "posAdmin") {
+        router.push("/pos/pos"); // আপনার দেওয়া রাউট
       } else {
         router.push("/");
       }

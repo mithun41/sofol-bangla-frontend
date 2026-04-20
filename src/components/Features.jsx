@@ -1,26 +1,26 @@
-import { Truck, ShieldCheck, Zap, Users } from "lucide-react";
+import { Truck, ShieldCheck, Zap, Headphones } from "lucide-react";
 
 const featureData = [
   {
-    icon: <Truck />,
+    icon: <Truck size={24} />,
     title: "Fast Delivery",
     color: "text-blue-600",
     bg: "bg-blue-50",
   },
   {
-    icon: <ShieldCheck />,
+    icon: <ShieldCheck size={24} />,
     title: "Authentic Products",
     color: "text-emerald-600",
     bg: "bg-emerald-50",
   },
   {
-    icon: <Zap />,
+    icon: <Zap size={24} />,
     title: "Matching Bonus",
     color: "text-amber-600",
     bg: "bg-amber-50",
   },
   {
-    icon: <Users />,
+    icon: <Headphones size={24} />,
     title: "Support 24/7",
     color: "text-purple-600",
     bg: "bg-purple-50",
@@ -29,17 +29,30 @@ const featureData = [
 
 export default function Features() {
   return (
-    <section className="py-20 max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8">
-      {featureData.map((item, idx) => (
-        <div key={idx} className="group text-center">
+    <section className="py-12 max-w-[1400px] mx-auto px-4">
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-5">
+        {featureData.map((item, idx) => (
           <div
-            className={`w-16 h-16 ${item.bg} ${item.color} rounded-2xl flex items-center justify-center mx-auto mb-4 group-hover:-translate-y-2 transition-transform duration-300`}
+            key={idx}
+            className="group flex flex-col items-center justify-center p-6 rounded-xl border border-slate-100 bg-white hover:border-[#FF620A]/40 transition-all duration-300 shadow-sm"
           >
-            {item.icon}
+            {/* Icon Box - NewArrivals এর ইমেজ বক্সের মতো স্টাইল */}
+            <div
+              className={`w-14 h-14 ${item.bg} ${item.color} rounded-full flex items-center justify-center mb-4 transition-transform duration-500 group-hover:scale-110`}
+            >
+              {item.icon}
+            </div>
+
+            {/* Title */}
+            <h3 className="font-bold text-slate-800 text-[14px] md:text-[16px] tracking-tight group-hover:text-[#FF620A] transition-colors">
+              {item.title}
+            </h3>
+
+            {/* ছোট একটা ডেকোরেশন লাইন যেটা হোভারে আসবে */}
+            <div className="w-0 h-0.5 bg-[#FF620A] mt-2 group-hover:w-8 transition-all duration-300 rounded-full"></div>
           </div>
-          <h3 className="font-black text-slate-800">{item.title}</h3>
-        </div>
-      ))}
+        ))}
+      </div>
     </section>
   );
 }

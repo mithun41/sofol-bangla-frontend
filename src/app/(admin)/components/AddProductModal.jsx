@@ -8,7 +8,7 @@ import {
   Banknote,
   Tag,
   Trash2,
-  Layers,
+  Barcode,
 } from "lucide-react";
 import { createProduct, getAllCategories } from "@/services/productService";
 
@@ -19,7 +19,8 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
   const [formData, setFormData] = useState({
     name: "",
     category: "",
-    unit_type: "piece", // ডিফল্ট 'piece' সেট করা হলো
+    unit_type: "piece",
+    barcode_number: "",
     purchase_price: "",
     price: "",
     stock: "",
@@ -34,10 +35,12 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
     });
   }, []);
 
+  // PV ক্যালকুলেশন ফাংশন - যা এখন সরাসরি ১.৭৫ এর মতো ভ্যালু দিবে
   const calculatePVValue = () => {
     const buy = parseFloat(formData.purchase_price) || 0;
     const sell = parseFloat(formData.price) || 0;
     const profit = sell - buy;
+    // এখানে profit / 4 এর মান দশমিক ২ ঘর পর্যন্ত রাখা হলো
     return profit > 0 ? (profit / 4).toFixed(2) : "0.00";
   };
 
@@ -57,15 +60,35 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     const data = new FormData();
+
+    // ফরম ডাটা অ্যাপেন্ড করা
     Object.keys(formData).forEach((key) => {
+      if (key === "barcode_number" && !formData[key]) return;
       if (formData[key] !== null) data.append(key, formData[key]);
     });
-    data.append("point_value", Math.round(calculatePVValue()));
+
+    /** * ফিক্সড: Math.round() সরিয়ে ফেলা হয়েছে।
+     * এখন সরাসরি দশমিক ভ্যালু ব্যাকএন্ডে যাবে।
+     */
+    data.append("point_value", calculatePVValue());
 
     try {
       await createProduct(data);
       onSuccess();
       onClose();
+      // রিসেট ফরম
+      setFormData({
+        name: "",
+        category: "",
+        unit_type: "piece",
+        barcode_number: "",
+        purchase_price: "",
+        price: "",
+        stock: "",
+        description: "",
+        image: null,
+      });
+      setPreview(null);
     } catch (err) {
       alert("Error creating product!");
     } finally {
@@ -85,7 +108,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               Add New Product
             </h2>
             <p className="text-xs text-slate-500 font-medium">
-              Select correct unit type for stock management
+              Leave barcode blank to auto-generate
             </p>
           </div>
           <button
@@ -113,6 +136,27 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               />
             </div>
 
+            {/* Barcode Input */}
+            <div className="md:col-span-2 relative">
+              <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
+                Product Barcode (Scan or Type)
+              </label>
+              <div className="relative">
+                <Barcode
+                  className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400"
+                  size={18}
+                />
+                <input
+                  type="text"
+                  name="barcode_number"
+                  value={formData.barcode_number}
+                  onChange={handleChange}
+                  className="w-full pl-12 pr-4 py-3 rounded-2xl border dark:bg-slate-800 dark:border-slate-700 outline-none focus:ring-2 focus:ring-blue-500 transition-all font-mono"
+                  placeholder="Scan manufacturer barcode here..."
+                />
+              </div>
+            </div>
+
             {/* Category */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
@@ -133,7 +177,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </select>
             </div>
 
-            {/* ✅ Unit Type (নতুন যোগ করা হলো) */}
+            {/* Unit Type */}
             <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
                 Unit Type
@@ -169,7 +213,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
             </div>
 
             {/* Purchase Price */}
-            <div className="relative">
+            <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
                 Purchase Price (৳)
               </label>
@@ -189,8 +233,8 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* Selling Price & PV Display (বাকি অংশ আগের মতোই) */}
-            <div className="relative">
+            {/* Selling Price */}
+            <div>
               <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
                 Selling Price (৳)
               </label>
@@ -210,6 +254,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               </div>
             </div>
 
+            {/* PV Display Area */}
             <div className="md:col-span-2 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/50 p-4 rounded-2xl flex items-center justify-between">
               <div>
                 <p className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-widest">
@@ -225,7 +270,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Description & Image Preview (আগের কোড অনুযায়ী থাকবে) */}
+          {/* Description */}
           <div className="md:col-span-2">
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
               Product Description
@@ -240,6 +285,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
             ></textarea>
           </div>
 
+          {/* Image Upload */}
           <div>
             <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
               Product Image
@@ -285,7 +331,7 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
           <button
             type="submit"
             disabled={loading}
-            className="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all"
+            className="w-full bg-slate-900 dark:bg-blue-600 text-white py-4 rounded-2xl font-bold flex items-center justify-center gap-3 shadow-xl transition-all hover:bg-black"
           >
             {loading ? (
               <Loader2 className="animate-spin" />

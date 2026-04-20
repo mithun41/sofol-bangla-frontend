@@ -97,7 +97,7 @@ export default function AdminLayout({ children }) {
   const menuItems = useMemo(
     () => [
       { name: "Dashboard", href: "/admin-dashboard", Icon: LayoutDashboard },
-      { name: "POS (Sales)", href: "/admin-dashboard/pos", Icon: ShoppingCart }, // ✅ POS লিঙ্ক অ্যাড করা হয়েছে
+     
       {
         name: "Manage Users",
         href: "/admin-dashboard/manage-users",

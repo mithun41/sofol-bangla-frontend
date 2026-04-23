@@ -21,6 +21,7 @@ export default function EditProductModal({
 }) {
   const [categories, setCategories] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [preview, setPreview] = useState(product?.image || null);
   const [formData, setFormData] = useState({
     name: product?.name || "",
     category: product?.category || "",
@@ -48,11 +49,42 @@ export default function EditProductModal({
     });
   }, []);
 
-  const handleChange = (e) => {
-    const { name, value, files } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: files ? files[0] : value }));
-  };
+const handleChange = (e) => {
+  const { name, value, files } = e.target;
 
+  if (files && files[0]) {
+    const file = files[0];
+
+    setFormData((prev) => ({
+      ...prev,
+      [name]: file,
+    }));
+
+    setPreview(URL.createObjectURL(file));
+  } else {
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  }
+};
+useEffect(() => {
+  if (product) {
+    setFormData({
+      name: product?.name || "",
+      category: product?.category || "",
+      purchase_price: product?.purchase_price || "",
+      price: product?.price || "",
+      stock: product?.stock || "",
+      unit_type: product?.unit_type || "piece",
+      barcode_number: product?.barcode_number || "",
+      description: product?.description || "",
+      image: null,
+    });
+
+    setPreview(product?.image || null);
+  }
+}, [product]);
   // PV ক্যালকুলেশন যা সরাসরি দশমিক মান রিটার্ন করবে
   const calculatedPV = () => {
     const buy = parseFloat(formData.purchase_price) || 0;
@@ -289,7 +321,68 @@ export default function EditProductModal({
               />
             </div>
           </div>
+          {/* Product Image Edit */}
+          <div className="md:col-span-2">
+            <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1 mb-1.5 block">
+              Product Image
+            </label>
 
+            {!preview ? (
+              <div className="relative border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-8 text-center hover:border-blue-400 group cursor-pointer transition-all">
+                <input
+                  type="file"
+                  name="image"
+                  accept="image/*"
+                  onChange={handleChange}
+                  className="absolute inset-0 opacity-0 cursor-pointer z-20"
+                />
+
+                <Upload
+                  className="mx-auto text-slate-400 group-hover:text-blue-500 mb-2"
+                  size={32}
+                />
+
+                <span className="text-sm font-medium text-slate-500">
+                  Upload Product Image
+                </span>
+              </div>
+            ) : (
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden group border">
+                <img
+                  src={preview}
+                  alt="preview"
+                  className="w-full h-full object-cover"
+                />
+
+                <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition flex items-center justify-center gap-3">
+                  <label className="bg-white text-slate-800 px-4 py-2 rounded-xl text-sm font-semibold cursor-pointer">
+                    Change Image
+                    <input
+                      type="file"
+                      name="image"
+                      accept="image/*"
+                      onChange={handleChange}
+                      hidden
+                    />
+                  </label>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setPreview(null);
+                      setFormData((prev) => ({
+                        ...prev,
+                        image: null,
+                      }));
+                    }}
+                    className="bg-red-500 text-white px-4 py-2 rounded-xl text-sm font-semibold"
+                  >
+                    Remove
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
           <button
             type="submit"
             disabled={loading}

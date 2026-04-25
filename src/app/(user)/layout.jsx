@@ -23,25 +23,13 @@ import { useAuth } from "@/context/AuthContext";
 import Image from "next/image";
 
 export default function UserLayout({ children }) {
-  const [user, setUser] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
   const [dropdownOpen, setDropdownOpen] = useState(false);
   const pathname = usePathname();
   const dropdownRef = useRef(null);
-  const { logout } = useAuth();
+const { user, logout } = useAuth();
 
-  useEffect(() => {
-    const fetchUser = async () => {
-      try {
-        const res = await api.get("accounts/profile/");
-        setUser(res.data);
-      } catch (err) {
-        console.error("Failed to load user info");
-      }
-    };
-    fetchUser();
-  }, []);
 
   useEffect(() => {
     const handleClickOutside = (event) => {

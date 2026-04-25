@@ -19,7 +19,8 @@
     "react-to-print": "^3.3.0",
     "recharts": "^3.7.0",
     "sweetalert2": "^11.26.17",
-    "swiper": "^12.1.0"
+    "swiper": "^12.1.0",
+    "swr": "^2.4.1"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",

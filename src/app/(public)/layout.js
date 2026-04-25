@@ -7,13 +7,11 @@ import { Toaster } from "react-hot-toast";
 
 export default function RootLayout({ children }) {
   return (
-    <CartProvider>
-      <AuthProvider>
-        <Navbar />
-        {children}
-        <Footer />
-        <Toaster />
-      </AuthProvider>
-    </CartProvider>
+    <>
+      <Navbar />
+      {children}
+      <Footer />
+      <Toaster />
+    </>
   );
 }

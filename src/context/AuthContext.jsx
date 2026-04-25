@@ -1,4 +1,5 @@
 "use client";
+// ✅ FINAL VERSION — cookie-based auth for middleware compatibility
 import { createContext, useContext, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import api from "@/services/api";
@@ -16,24 +17,11 @@ export const AuthProvider = ({ children }) => {
       const res = await api.get("accounts/profile/");
       const userData = res.data;
       setUser(userData);
-
       Cookies.set("role", userData.role, { expires: 7 });
-
-      // রিডাইরেক্ট সেফটি চেক
-      const path = window.location.pathname;
-
-      if (userData.role === "admin" && path === "/dashboard") {
-        router.replace("/admin-dashboard");
-      }
-      // ✅ যদি posAdmin ভুল করে অ্যাডমিন ড্যাশবোর্ডের মেইন পেজে ঢোকে, তাকে POS-এ পাঠান
-      else if (
-        userData.role === "posAdmin" &&
-        window.location.pathname === "/"
-      ) {
-        router.replace("/pos/pos");
-      }
+      return userData;
     } catch (err) {
       logout();
+      return null;
     } finally {
       setLoading(false);
     }
@@ -48,42 +36,32 @@ export const AuthProvider = ({ children }) => {
     }
   }, []);
 
-  // AuthContext.jsx এর login ফাংশনের ভেতর
   const login = async (credentials) => {
     try {
       const res = await api.post("accounts/login/", credentials);
       const { access, refresh, role } = res.data;
 
+      // Cookie ও localStorage এ token সেট করো
       Cookies.set("token", access, { expires: 7 });
       Cookies.set("role", role, { expires: 7 });
-
       localStorage.setItem("access", access);
       localStorage.setItem("refresh", refresh);
 
+      // Profile fetch করো — redirect এখানে করবে না
       await fetchProfile();
 
-      // ✅ আপনার রাউট অনুযায়ী রিডাইরেক্ট
-      if (role === "admin") {
-        router.push("/admin-dashboard");
-      } else if (role === "posAdmin") {
-        router.push("/pos/pos"); // আপনার দেওয়া রাউট
-      } else {
-        router.push("/");
-      }
-      return { success: true };
+      // role return করো — redirect login page থেকে handle হবে
+      return { success: true, role };
     } catch (err) {
-      return { success: false, error: "Login failed" };
+      return { success: false, error: "Username বা Password ভুল হয়েছে" };
     }
   };
-  console.log(user);
+
   const logout = () => {
     localStorage.removeItem("access");
     localStorage.removeItem("refresh");
-
-    // কুকি রিমুভ করার সময় পাথ স্পেসিফাই করা ভালো
     Cookies.remove("token", { path: "/" });
     Cookies.remove("role", { path: "/" });
-
     setUser(null);
     router.push("/login");
   };

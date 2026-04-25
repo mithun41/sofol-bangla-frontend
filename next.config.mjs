@@ -1,8 +1,12 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
-    unoptimized: true,
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "https://mithun41.pythonanywhere.com/", // তোমার actual backend domain
+      },
+    ],
   },
 };
-
 export default nextConfig;

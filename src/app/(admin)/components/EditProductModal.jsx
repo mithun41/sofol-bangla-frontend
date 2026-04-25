@@ -37,9 +37,6 @@ export default function EditProductModal({
   const unitTypes = [
     { label: "Piece", value: "piece" },
     { label: "KG", value: "kg" },
-    { label: "Gram", value: "gram" },
-    { label: "Litre", value: "litre" },
-    { label: "Packet", value: "packet" },
   ];
 
   useEffect(() => {

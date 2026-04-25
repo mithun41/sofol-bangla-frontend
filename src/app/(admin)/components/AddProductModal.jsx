@@ -191,8 +191,6 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
               >
                 <option value="piece">Piece (pcs)</option>
                 <option value="kg">Kilogram (kg)</option>
-                <option value="gram">Gram (g)</option>
-                <option value="liter">Liter (L)</option>
               </select>
             </div>
 

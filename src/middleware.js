@@ -5,28 +5,33 @@ export function middleware(request) {
   const role = request.cookies.get("role")?.value;
   const { pathname } = request.nextUrl;
 
-  // ১. অথেন্টিকেশন চেক: টোকেন না থাকলে প্রোটেক্টড রুটে ঢুকতে বাধা দিন
+  // ১. Login/Register পেজে আগে থেকে logged in থাকলে redirect
+  if (token && (pathname === "/login" || pathname === "/register")) {
+    if (role === "admin")
+      return NextResponse.redirect(new URL("/admin-dashboard", request.url));
+    if (role === "posAdmin")
+      return NextResponse.redirect(new URL("/pos/pos", request.url));
+    return NextResponse.redirect(new URL("/dashboard", request.url));
+  }
+
+  // ২. Token না থাকলে protected route এ ঢুকতে বাধা
   const protectedRoutes = ["/dashboard", "/admin-dashboard", "/pos"];
   if (!token && protectedRoutes.some((route) => pathname.startsWith(route))) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // ২. posAdmin এর জন্য অ্যাক্সেস কন্ট্রোল
+  // ৩. posAdmin — শুধু /pos/* এ যেতে পারবে
   if (role === "posAdmin") {
-    // সে যদি হোমপেজ, সাধারণ ড্যাশবোর্ড বা অ্যাডমিন ড্যাশবোর্ডে যাওয়ার চেষ্টা করে
-    // তাকে ধাক্কা দিয়ে তার নির্দিষ্ট রাউট /pos/pos এ পাঠিয়ে দিন
-    if (
-      pathname === "/" ||
-      pathname.startsWith("/dashboard") ||
-      pathname.startsWith("/admin-dashboard")
-    ) {
-      return NextResponse.redirect(new URL("/pos/pos", request.url));
+    // /pos/pos বা /pos/* এ থাকলে আটকাবে না — allow করবে
+    if (pathname.startsWith("/pos")) {
+      return NextResponse.next();
     }
+    // অন্য যেকোনো জায়গায় গেলে /pos/pos এ পাঠাবে
+    return NextResponse.redirect(new URL("/pos/pos", request.url));
   }
 
-  // ৩. সাধারণ কাস্টমার (customer) প্রোটেকশন
+  // ৪. customer — admin বা pos panel এ ঢুকতে পারবে না
   if (role === "customer") {
-    // কাস্টমার যেন অ্যাডমিন প্যানেল বা POS প্যানেলে না ঢুকতে পারে
     if (
       pathname.startsWith("/admin-dashboard") ||
       pathname.startsWith("/pos")
@@ -35,9 +40,8 @@ export function middleware(request) {
     }
   }
 
-  // ৪. মেইন এডমিন (admin) প্রোটেকশন
+  // ৫. admin — customer dashboard এ যেতে পারবে না
   if (role === "admin") {
-    // এডমিন যদি ভুল করে সাধারণ কাস্টমার ড্যাশবোর্ডে যায়
     if (pathname.startsWith("/dashboard")) {
       return NextResponse.redirect(new URL("/admin-dashboard", request.url));
     }
@@ -46,7 +50,13 @@ export function middleware(request) {
   return NextResponse.next();
 }
 
-// এই কনফিগুরেশনটি নিশ্চিত করে যে কোন কোন রুটে মিডলওয়্যার চেক করবে
 export const config = {
-  matcher: ["/dashboard/:path*", "/admin-dashboard/:path*", "/pos/:path*", "/"],
+  matcher: [
+    "/dashboard/:path*",
+    "/admin-dashboard/:path*",
+    "/pos/:path*",
+    "/login",
+    "/register",
+    "/",
+  ],
 };

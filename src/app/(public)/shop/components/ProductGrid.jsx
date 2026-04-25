@@ -27,7 +27,7 @@ export default function ProductGrid({
     return (
       <div className="flex-1">
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
-          {Array.from({ length: 12 }).map((_, i) => (
+          {Array.from({ length: 16 }).map((_, i) => (
             <SkeletonCard key={i} />
           ))}
         </div>
@@ -80,7 +80,7 @@ export default function ProductGrid({
         </div>
       )}
 
-      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-4 lg:gap-6">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4 lg:gap-6">
         {products.map((p) => (
           <ProductCard
             key={p.id}

@@ -9,7 +9,7 @@ export default function BonusPromo() {
 
   return (
     <section className="px-4 md:px-6 mb-20">
-      <div className="max-w-7xl mx-auto rounded-[40px] bg-gradient-to-r from-[#FF620A] to-[#ff7e35] p-8 md:p-14 text-white relative overflow-hidden">
+      <div className="max-w-11/12 mx-auto rounded-[40px] bg-gradient-to-r from-[#FF620A] to-[#ff7e35] p-8 md:p-14 text-white relative overflow-hidden">
         {/* Background glow */}
         <div className="absolute -top-20 -right-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>
         <div className="absolute -bottom-20 -left-20 w-80 h-80 bg-white/10 rounded-full blur-3xl"></div>

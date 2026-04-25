@@ -12,7 +12,7 @@ import FilterSidebar from "./components/FilterSidebar";
 import ProductGrid from "./components/ProductGrid";
 import Pagination from "./components/Pagination";
 
-const PRODUCTS_PER_PAGE = 12;
+const PRODUCTS_PER_PAGE = 35;
 
 // SWR fetchers — key same থাকলে cache hit হবে, নতুন call হবে না
 const productFetcher = () =>
@@ -50,7 +50,7 @@ export default function ShopContent() {
   const [debouncedSearch, setDebouncedSearch] = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
   const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(50000);
+  const [maxPrice, setMaxPrice] = useState(10000);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
 
@@ -129,7 +129,7 @@ export default function ShopContent() {
 
   return (
     <div className="min-h-screen bg-slate-50">
-      <Toaster position="top-right" />
+      <Toaster position="bottom-right" />
 
       <ShopHeader
         search={search}
@@ -139,7 +139,7 @@ export default function ShopContent() {
         loading={loading}
       />
 
-      <div className="max-w-7xl mx-auto px-4 py-8 flex gap-8">
+      <div className="max-w-11/12 mx-auto px-4 py-8 flex gap-8">
         {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0">
           <FilterSidebar

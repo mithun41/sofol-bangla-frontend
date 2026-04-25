@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronRight } from "lucide-react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import PriceRangeSlider from "./PriceRangeSlider";
 
 export default function FilterSidebar({
@@ -16,92 +16,131 @@ export default function FilterSidebar({
 
   const selectCategory = (id) => {
     setSelectedCategory(id);
-    if (closeDrawer) closeDrawer();
+    if (closeDrawer) closeDrawer(); // only close on actual filter select
   };
 
-  const handleCategoryClick = (cat) => {
-    // filter apply
-    selectCategory(cat.id);
-
-    // accordion toggle যদি subcategory থাকে
-    if (cat.subcategories && cat.subcategories.length > 0) {
-      setOpenCategory(openCategory === cat.id ? null : cat.id);
-    }
+  const toggleCategory = (id) => {
+    setOpenCategory(openCategory === id ? null : id);
   };
+
+  // if selected subcategory belongs to a parent, keep that parent opened
+  useEffect(() => {
+    categories?.forEach((cat) => {
+      if (cat.subcategories?.some((sub) => sub.id === selectedCategory)) {
+        setOpenCategory(cat.id);
+      }
+    });
+  }, [selectedCategory, categories]);
 
   return (
-    <div className="bg-white border border-slate-100 rounded-xl p-4 space-y-6">
+    <aside className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm space-y-8">
+      {/* CATEGORY */}
       <div>
-        <h3 className="font-bold mb-3 text-sm text-[#007A55]">Categories</h3>
+        <h3 className="font-bold mb-4 text-sm uppercase tracking-wide text-[#007A55]">
+          Categories
+        </h3>
 
-        {/* All Products */}
+        {/* ALL PRODUCTS */}
         <button
           onClick={() => selectCategory("All")}
-          className={`flex justify-between w-full text-sm py-1 ${
-            selectedCategory === "All" ? "text-[#FF620A] font-semibold" : ""
+          className={`w-full flex items-center justify-between rounded-xl px-3 py-3 text-sm transition
+          ${
+            selectedCategory === "All"
+              ? "bg-orange-50 text-[#FF620A] font-semibold"
+              : "hover:bg-slate-50"
           }`}
         >
-          All Products
-          {selectedCategory === "All" && <Check size={14} />}
+          <span>All Products</span>
+          {selectedCategory === "All" && <Check size={16} />}
         </button>
 
-        {categories.map((c) => (
-          <div key={c.id} className="mt-1">
-            {/* Main Category */}
-            <button
-              onClick={() => handleCategoryClick(c)}
-              className={`flex items-center justify-between w-full text-sm py-1 ${
-                selectedCategory === c.id ? "text-[#FF620A] font-semibold" : ""
-              }`}
-            >
-              <span>{c.name}</span>
+        <div className="mt-2 space-y-1">
+          {categories?.map((cat) => {
+            const isActive = selectedCategory === cat.id;
+            const isOpen = openCategory === cat.id;
+            const hasSubs = cat.subcategories && cat.subcategories.length > 0;
 
-              {c.subcategories &&
-                c.subcategories.length > 0 &&
-                (openCategory === c.id ? (
-                  <ChevronDown size={14} />
-                ) : (
-                  <ChevronRight size={14} />
-                ))}
-            </button>
+            return (
+              <div
+                key={cat.id}
+                className="rounded-xl border border-transparent hover:border-slate-200"
+              >
+                {/* Main row */}
+                <div className="flex items-center">
+                  {/* category select */}
+                  <button
+                    onClick={() => selectCategory(cat.id)}
+                    className={`flex-1 text-left rounded-l-xl px-3 py-3 text-sm transition
+                    ${
+                      isActive
+                        ? "bg-orange-50 text-[#FF620A] font-semibold"
+                        : "hover:bg-slate-50"
+                    }`}
+                  >
+                    {cat.name}
+                  </button>
 
-            {/* Subcategories */}
-            {openCategory === c.id &&
-              c.subcategories &&
-              c.subcategories.length > 0 && (
-                <div className="ml-4 mt-1 space-y-1">
-                  {c.subcategories.map((sub) => (
+                  {/* accordion toggle separate */}
+                  {hasSubs && (
                     <button
-                      key={sub.id}
-                      onClick={() => selectCategory(sub.id)}
-                      className={`flex justify-between w-full text-sm py-1 ${
-                        selectedCategory === sub.id
-                          ? "text-[#FF620A] font-semibold"
-                          : ""
-                      }`}
+                      onClick={() => toggleCategory(cat.id)}
+                      className="px-3 py-3 rounded-r-xl hover:bg-slate-50"
+                      aria-label="Toggle subcategories"
                     >
-                      {sub.name}
-                      {selectedCategory === sub.id && <Check size={14} />}
+                      {isOpen ? (
+                        <ChevronDown size={16} />
+                      ) : (
+                        <ChevronRight size={16} />
+                      )}
                     </button>
-                  ))}
+                  )}
                 </div>
-              )}
-          </div>
-        ))}
+
+                {/* SUBCATEGORIES */}
+                {hasSubs && isOpen && (
+                  <div className="ml-3 mt-1 mb-2 pl-3 border-l border-slate-200 space-y-1">
+                    {cat.subcategories.map((sub) => {
+                      const subActive = selectedCategory === sub.id;
+
+                      return (
+                        <button
+                          key={sub.id}
+                          onClick={() => selectCategory(sub.id)}
+                          className={`w-full flex items-center justify-between rounded-lg px-3 py-3 text-sm transition
+                          ${
+                            subActive
+                              ? "bg-orange-50 text-[#FF620A] font-semibold"
+                              : "hover:bg-slate-50"
+                          }`}
+                        >
+                          <span>{sub.name}</span>
+                          {subActive && <Check size={15} />}
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
       </div>
 
+      {/* PRICE */}
       <div>
-        <h3 className="font-bold mb-3 text-sm text-[#007A55]">Price Range</h3>
+        <h3 className="font-bold mb-4 text-sm uppercase tracking-wide text-[#007A55]">
+          Price Range
+        </h3>
 
         <PriceRangeSlider
           min={0}
-          max={50000}
+          max={10000}
           minVal={minPrice}
           maxVal={maxPrice}
           onMinChange={setMinPrice}
           onMaxChange={setMaxPrice}
         />
       </div>
-    </div>
+    </aside>
   );
 }

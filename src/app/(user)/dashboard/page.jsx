@@ -16,6 +16,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import UserMonthlyReport from "@/components/UserMonthlyReport";
+import { useAuth } from "@/context/AuthContext";
 
 export default function DashboardHome() {
   const [stats, setStats] = useState(null);

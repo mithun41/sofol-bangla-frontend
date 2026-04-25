@@ -87,7 +87,7 @@ export default function NewArrivals() {
   };
 
   return (
-    <section className="py-12 px-4 max-w-[1400px] mx-auto bg-white">
+    <section className="py-12 px-4 max-w-11/12 mx-auto bg-white">
       <Toaster />
 
       {/* Header */}

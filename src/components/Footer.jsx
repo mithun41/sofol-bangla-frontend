@@ -157,32 +157,32 @@ export default function Footer() {
           <ul className="space-y-4 text-sm">
             <li className="flex items-start gap-3">
               <MapPin size={18} className="text-[#007a55] shrink-0" />
-              <span>Dhaka, Bangladesh</span>
+              <span>Barisal, Bangladesh</span>
             </li>
 
             <li className="flex items-center gap-3">
               <Phone size={18} className="text-[#007a55] shrink-0" />
-              <span>+880 1700-000000</span>
+              <span>+8801710855197</span>
             </li>
 
             <li className="flex items-center gap-3">
               <Mail size={18} className="text-[#007a55] shrink-0" />
-              <span>support@sofolbangla.com</span>
+              <span>sofolbangla52@gmail.com</span>
             </li>
           </ul>
         </div>
       </div>
 
       {/* Bottom Bar */}
-      <div className="border-t border-slate-800 bg-[#0a0f1d]">
+      <div className="border-t border-slate-800 bg-[#0a0f1d] flex items-center justify-center ">
         <div className="max-w-7xl mx-auto px-6 py-8 flex flex-col md:flex-row justify-between items-center gap-6">
           <p className="text-xs text-slate-500 tracking-wide text-center md:text-left">
-            © {currentYear} Sofol Bangla Ltd. All rights reserved. v-1.1
-            (Updated Today)
+            © {currentYear} Sofol Bangla Ltd. All rights reserved.
+            
           </p>
 
           {/* Payment */}
-          <div className="flex items-center gap-3">
+          {/* <div className="flex items-center gap-3">
             <span className="text-[10px] border border-slate-700 px-2 py-1 rounded">
               BKASH
             </span>
@@ -192,7 +192,7 @@ export default function Footer() {
             <span className="text-[10px] border border-slate-700 px-2 py-1 rounded">
               ROCKET
             </span>
-          </div>
+          </div> */}
         </div>
       </div>
     </footer>

@@ -61,7 +61,7 @@ export default function Banner() {
                 <img
                   src={slide.image}
                   alt={slide.title || "Banner"}
-                  className="w-full h-full object-cover"
+                  className="w-full h-full "
                   // প্রথম banner priority load, বাকিগুলো lazy
                   loading={index === 0 ? "eager" : "lazy"}
                   decoding={index === 0 ? "sync" : "async"}

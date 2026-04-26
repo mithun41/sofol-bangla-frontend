@@ -11,6 +11,7 @@ import {
   Barcode,
 } from "lucide-react";
 import { createProduct, getAllCategories } from "@/services/productService";
+import Swal from "sweetalert2";
 
 export default function AddProductModal({ isOpen, onClose, onSuccess }) {
   const [categories, setCategories] = useState([]);
@@ -60,23 +61,29 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
     setLoading(true);
 
     const data = new FormData();
-
-    // ফরম ডাটা অ্যাপেন্ড করা
     Object.keys(formData).forEach((key) => {
       if (key === "barcode_number" && !formData[key]) return;
       if (formData[key] !== null) data.append(key, formData[key]);
     });
 
-    /** * ফিক্সড: Math.round() সরিয়ে ফেলা হয়েছে।
-     * এখন সরাসরি দশমিক ভ্যালু ব্যাকএন্ডে যাবে।
-     */
     data.append("point_value", calculatePVValue());
 
     try {
       await createProduct(data);
+
+      // SweetAlert Success Message
+      Swal.fire({
+        title: "Success!",
+        text: "Product has been added successfully.",
+        icon: "success",
+        confirmButtonColor: "#3b82f6", // Blue color to match your UI
+        timer: 2000,
+      });
+
       onSuccess();
       onClose();
-      // রিসেট ফরম
+
+      // Reset Form
       setFormData({
         name: "",
         category: "",
@@ -90,7 +97,13 @@ export default function AddProductModal({ isOpen, onClose, onSuccess }) {
       });
       setPreview(null);
     } catch (err) {
-      alert("Error creating product!");
+      // SweetAlert Error Message
+      Swal.fire({
+        title: "Error!",
+        text: "Something went wrong while creating the product.",
+        icon: "error",
+        confirmButtonColor: "#ef4444",
+      });
     } finally {
       setLoading(false);
     }

@@ -20,26 +20,44 @@ function BarcodeSlip({ product }) {
   return (
     <div
       style={{
-        width: "50mm",
+        width: "100%", 
+        height: "100%", // পুরো স্টিকারের উচ্চতা নিবে
         padding: "1mm 2mm",
-        fontFamily: "monospace",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 0,
+        justifyContent: "space-between", // উপর-নিচ সমানভাবে ছড়াবে
+        boxSizing: "border-box",
       }}
     >
-      <p style={{ fontSize: "6pt", fontWeight: "bold", textAlign: "center", margin: 0, lineHeight: "1.2", wordBreak: "break-word", width: "100%" }}>
-        {product.name}
-      </p>
-      <p style={{ fontSize: "6pt", margin: "0.5mm 0 0.5mm 0", lineHeight: "1", textAlign: "center" }}>
-        Price: ৳{Math.floor(Number(product.price))}
-      </p>
-      <img
-        src={product.barcode_image}
-        alt="barcode"
-        style={{ width: "70%", height: "auto", maxHeight: "10mm", objectFit: "contain", display: "block", margin: 0 }}
-      />
+      <div style={{ textAlign: "center", width: "100%" }}>
+        <p style={{ 
+          fontSize: "10pt", 
+          fontWeight: "bold", 
+          margin: "0 0 1mm 0", 
+          lineHeight: "1",
+          wordBreak: "break-all"
+        }}>
+          {product.name}
+        </p>
+        <p style={{ fontSize: "9pt", fontWeight: "bold", margin: 0 }}>
+          Price: ৳{Math.floor(Number(product.price))}
+        </p>
+      </div>
+
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <img
+          src={product.barcode_image}
+          alt="barcode"
+          style={{ 
+            width: "100%", 
+            height: "30mm", // বারকোড বড় করার জন্য
+            objectFit: "fill",
+            display: "block"
+          }}
+        />
+        
+      </div>
     </div>
   );
 }
@@ -61,15 +79,21 @@ export default function ManageProducts() {
   const barcodePrintRef = useRef();
 
   // useReactToPrint — onAfterPrint এ cleanup
-  const handlePrint = useReactToPrint({
+ const handlePrint = useReactToPrint({
     contentRef: barcodePrintRef,
     pageStyle: `
       @page {
-        size: 50mm auto;   /* slip width, height auto */
+        size: 58mm 45mm landscape; /* landscape দিলে রোটেশন ঠিক হওয়ার কথা */
         margin: 0;
       }
       @media print {
-        body { margin: 0; }
+        html, body {
+          height: 45mm;
+          width: 58mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden;
+        }
       }
     `,
     onAfterPrint: () => setPrintProduct(null),

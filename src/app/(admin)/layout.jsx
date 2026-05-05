@@ -25,6 +25,7 @@ import {
   ChevronLeft,
   ChevronRight,
   BanIcon,
+  ShoppingBag,
 } from "lucide-react";
 
 export default function AdminLayout({ children }) {
@@ -110,6 +111,7 @@ export default function AdminLayout({ children }) {
       },
       { name: "Manage Orders", href: "/admin-dashboard/orders", Icon: Package },
       { name: "Income Reports", href: "/admin-dashboard/income-report", Icon: Package },
+      { name: "Sales Report", href: "/admin-dashboard/sales-report", Icon: ShoppingBag },
       { name: "Categories", href: "/admin-dashboard/categories", Icon: Layers },
       {
         name: "Binary Tree",

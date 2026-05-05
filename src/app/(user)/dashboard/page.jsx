@@ -53,11 +53,11 @@ export default function DashboardHome() {
 
   const getNextRankInfo = () => {
     const ranks = [
-      { level: 4, target: 15 },
-      { level: 5, target: 50 },
-      { level: 6, target: 200 },
-      { level: 7, target: 500 },
-      { level: 8, target: 1200 },
+      { level: 'Leader', target: 15 },
+      { level: 'Sales Officer', target: 50 },
+      { level: 'Sr. Sales Officer', target: 200 },
+      { level: "Incharge", target: 500 },
+      { level: "Manager", target: 1200 },
     ];
     const next = ranks.find((r) => r.level > user.star_level);
     if (!next) return null;

@@ -111,58 +111,83 @@ export const CartProvider = ({ children }) => {
   };
 
   // ৫. কার্টে আইটেম যোগ করা
-  const addToCart = async (product, quantity = 1) => {
-    const token = getAuthToken();
-    const qtyToAdd = Number(quantity);
+  // ৫. কার্টে আইটেম যোগ করা
+const addToCart = async (product, quantity = 1) => {
+  const token = getAuthToken();
+  const qtyToAdd = Number(quantity);
 
-    if (token) {
-      try {
-        await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/`, {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-            Authorization: `Bearer ${token}`,
-          },
-          body: JSON.stringify({
-            product: product.id,
-            quantity: qtyToAdd,
-          }),
-        });
-        fetchDatabaseCart(token);
-      } catch (err) {
-        console.error(err);
+  if (token) {
+    // ── OPTIMISTIC UPDATE: আগে UI তে দেখাও ──
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      if (existing) {
+        return prev.map((i) =>
+          i.id === product.id
+            ? { ...i, quantity: i.quantity + qtyToAdd }
+            : i
+        );
       }
-    } else {
-      setCart((prev) => {
-        const existing = prev.find((i) => i.id === product.id);
-        let newCart;
+      return [
+        ...prev,
+        {
+          ...product,
+          quantity: qtyToAdd,
+          point_value: Number(product.point_value || 0),
+          item_subtotal: Number(product.price) * qtyToAdd,
+        },
+      ];
+    });
 
-        if (existing) {
-          newCart = prev.map((i) =>
-            i.id === product.id
-              ? {
-                  ...i,
-                  quantity: Number((i.quantity + qtyToAdd).toFixed(3)),
-                  item_subtotal: (i.quantity + qtyToAdd) * i.price,
-                }
-              : i,
-          );
-        } else {
-          newCart = [
-            ...prev,
-            {
-              ...product,
-              quantity: qtyToAdd,
-              unit_type: product.unit_type,
-              item_subtotal: Number(product.price) * qtyToAdd,
-            },
-          ];
-        }
-        localStorage.setItem("cart", JSON.stringify(newCart));
-        return newCart;
+    try {
+      await fetch(`${process.env.NEXT_PUBLIC_API_BASE_URL}products/cart/`, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          Authorization: `Bearer ${token}`,
+        },
+        body: JSON.stringify({
+          product: product.id,
+          quantity: qtyToAdd,
+        }),
       });
+      // ── DB sync: POST এর পর একবারই fetch ──
+      await fetchDatabaseCart(token);
+    } catch (err) {
+      console.error(err);
+      // Rollback optimistic update on error
+      await fetchDatabaseCart(token);
     }
-  };
+  } else {
+    // Guest logic — আগের মতোই
+    setCart((prev) => {
+      const existing = prev.find((i) => i.id === product.id);
+      let newCart;
+      if (existing) {
+        newCart = prev.map((i) =>
+          i.id === product.id
+            ? {
+                ...i,
+                quantity: Number((i.quantity + qtyToAdd).toFixed(3)),
+                item_subtotal: (i.quantity + qtyToAdd) * i.price,
+              }
+            : i
+        );
+      } else {
+        newCart = [
+          ...prev,
+          {
+            ...product,
+            quantity: qtyToAdd,
+            unit_type: product.unit_type,
+            item_subtotal: Number(product.price) * qtyToAdd,
+          },
+        ];
+      }
+      localStorage.setItem("cart", JSON.stringify(newCart));
+      return newCart;
+    });
+  }
+};
 
   // ৬. কোয়ান্টিটি আপডেট করা (Plus/Minus)
   const updateQuantity = async (id, cartItemId, change) => {

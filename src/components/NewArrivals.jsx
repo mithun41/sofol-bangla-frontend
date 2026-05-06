@@ -196,11 +196,11 @@ export default function NewArrivals() {
                       <span
                         className={`${isOutOfStock ? "text-slate-400" : "text-[#007A55]"} font-bold text-sm`}
                       >
-                        Tk {Math.floor(sellPrice).toLocaleString()}
+                        Tk {Number(sellPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                       </span>
                       {isActiveMember && originalPrice && !isOutOfStock && (
                         <span className="text-slate-400 text-[11px] line-through">
-                          Tk {Math.floor(originalPrice).toLocaleString()}
+                          Tk {Number(originalPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                         </span>
                       )}
                     </div>

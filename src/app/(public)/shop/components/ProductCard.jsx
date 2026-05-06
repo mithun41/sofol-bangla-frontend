@@ -96,13 +96,13 @@ export default function ProductCard({ product, onAddToCart, onOrderNow }) {
             <div>
               {/* সেল প্রাইস (২২০০) */}
               <p className="text-base font-black text-[#007a55]">
-                ৳{Math.floor(displayPrice).toLocaleString()}
+                ৳{Number(displayPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
               </p>
 
               {/* অরিজিনাল প্রাইস (৪০০০) - শুধু একটিভ মেম্বারদের জন্য কাটা অবস্থায় দেখাবে */}
               {isActiveMember && discountAmount > 0 && (
                 <p className="text-[11px] text-slate-400 line-through mt-0.5">
-                  ৳{Math.floor(originalPrice).toLocaleString()}
+                  ৳{Number(originalPrice).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
                 </p>
               )}
 

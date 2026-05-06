@@ -41,7 +41,7 @@ function BarcodeSlip({ product }) {
           {product.name}
         </p>
         <p style={{ fontSize: "9pt", fontWeight: "bold", margin: 0 }}>
-          Price: ৳{Math.floor(Number(product.price))}
+          Price: ৳{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
         </p>
       </div>
 
@@ -311,7 +311,7 @@ export default function ManageProducts() {
 
                       {/* Price / PV */}
                       <td className="px-6 py-4">
-                        <p className="font-black text-xs">৳{Math.floor(p.price)}</p>
+                        <p className="font-black text-xs">৳{Number(p.price).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
                         <p className="text-[9px] font-bold text-emerald-500 uppercase">{p.point_value} PV</p>
                       </td>
 

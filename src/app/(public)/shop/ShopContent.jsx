@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useMemo, useCallback } from "react";
+import { useState, useEffect, useMemo, useCallback, useRef } from "react";
 import useSWR from "swr";
 import { getAllProducts, getAllCategorie } from "@/services/productService";
 import { useCart } from "@/context/CartContext";
@@ -10,11 +10,9 @@ import toast, { Toaster } from "react-hot-toast";
 import ShopHeader from "./components/ShopHeader";
 import FilterSidebar from "./components/FilterSidebar";
 import ProductGrid from "./components/ProductGrid";
-import Pagination from "./components/Pagination";
 
-const PRODUCTS_PER_PAGE = 35;
+const BATCH_SIZE = 20;
 
-// SWR fetchers — key same থাকলে cache hit হবে, নতুন call হবে না
 const productFetcher = () =>
   getAllProducts().then((r) =>
     Array.isArray(r.data) ? r.data : r.data.results || [],
@@ -29,12 +27,12 @@ export default function ShopContent() {
   const { addToCart } = useCart();
   const router = useRouter();
   const searchParams = useSearchParams();
+  const loaderRef = useRef(null);
 
-  // SWR দিয়ে data fetch — page navigate করলে cache থেকে দেবে, reload হবে না
   const { data: products = [], isLoading: productsLoading } = useSWR(
     "all-products",
     productFetcher,
-    { revalidateOnFocus: false, dedupingInterval: 60000 }, // ১ মিনিট cache
+    { revalidateOnFocus: false, dedupingInterval: 60000 },
   );
 
   const { data: categories = [], isLoading: categoriesLoading } = useSWR(
@@ -45,44 +43,40 @@ export default function ShopContent() {
 
   const loading = productsLoading || categoriesLoading;
 
-  // Filter states
-  const [search, setSearch] = useState("");
-  const [debouncedSearch, setDebouncedSearch] = useState("");
+  const [search, setSearch]                     = useState("");
+  const [debouncedSearch, setDebouncedSearch]   = useState("");
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [minPrice, setMinPrice] = useState(0);
-  const [maxPrice, setMaxPrice] = useState(10000);
+  const [minPrice, setMinPrice]                 = useState(0);
+  const [maxPrice, setMaxPrice]                 = useState(10000);
   const [mobileFilterOpen, setMobileFilterOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [visibleCount, setVisibleCount]         = useState(BATCH_SIZE);
+  const [isFetching, setIsFetching]             = useState(false);
 
-  // URL থেকে category নেওয়া
   useEffect(() => {
     const categoryId = searchParams.get("category");
     setSelectedCategory(categoryId || "All");
-    setCurrentPage(1);
+    setVisibleCount(BATCH_SIZE);
   }, [searchParams]);
 
-  // Search debounce — টাইপ করার সাথে সাথে filter না করে ৩০০ms পরে করবে
   useEffect(() => {
     const timer = setTimeout(() => {
       setDebouncedSearch(search);
-      setCurrentPage(1); // search করলে page 1 এ ফিরে যাবে
+      setVisibleCount(BATCH_SIZE);
     }, 300);
     return () => clearTimeout(timer);
   }, [search]);
 
-  // Filter change হলে page 1 এ রিসেট
   const handleCategoryChange = useCallback((cat) => {
     setSelectedCategory(cat);
-    setCurrentPage(1);
+    setVisibleCount(BATCH_SIZE);
   }, []);
 
   const handlePriceChange = useCallback((min, max) => {
     setMinPrice(min);
     setMaxPrice(max);
-    setCurrentPage(1);
+    setVisibleCount(BATCH_SIZE);
   }, []);
 
-  // useMemo দিয়ে filter — products বা search না বদলালে recalculate হবে না
   const filteredProducts = useMemo(() => {
     return products.filter((p) => {
       const nameMatch = (p.name || "")
@@ -98,12 +92,33 @@ export default function ShopContent() {
     });
   }, [products, debouncedSearch, selectedCategory, minPrice, maxPrice]);
 
-  // Pagination calculation
-  const totalPages = Math.ceil(filteredProducts.length / PRODUCTS_PER_PAGE);
-  const paginatedProducts = useMemo(() => {
-    const start = (currentPage - 1) * PRODUCTS_PER_PAGE;
-    return filteredProducts.slice(start, start + PRODUCTS_PER_PAGE);
-  }, [filteredProducts, currentPage]);
+  const visibleProducts = useMemo(
+    () => filteredProducts.slice(0, visibleCount),
+    [filteredProducts, visibleCount],
+  );
+
+  const hasMore = visibleCount < filteredProducts.length;
+
+  useEffect(() => {
+    const el = loaderRef.current;
+    if (!el) return;
+
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries[0].isIntersecting && hasMore && !isFetching) {
+          setIsFetching(true);
+          setTimeout(() => {
+            setVisibleCount((prev) => prev + BATCH_SIZE);
+            setIsFetching(false);
+          }, 300);
+        }
+      },
+      { threshold: 0.1 },
+    );
+
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [hasMore, isFetching]);
 
   const handleAddToCart = useCallback(
     (product) => {
@@ -121,12 +136,6 @@ export default function ShopContent() {
     [addToCart, router],
   );
 
-  const handlePageChange = (page) => {
-    setCurrentPage(page);
-    // page change হলে উপরে scroll করবে
-    window.scrollTo({ top: 0, behavior: "smooth" });
-  };
-
   return (
     <div className="min-h-screen bg-slate-50">
       <Toaster position="bottom-right" />
@@ -140,7 +149,6 @@ export default function ShopContent() {
       />
 
       <div className="max-w-11/12 mx-auto px-4 py-8 flex gap-8">
-        {/* Desktop Sidebar */}
         <aside className="hidden lg:block w-64 shrink-0">
           <FilterSidebar
             categories={categories}
@@ -153,27 +161,32 @@ export default function ShopContent() {
           />
         </aside>
 
-        {/* Main Content */}
         <div className="flex-1 min-w-0">
           <ProductGrid
-            products={paginatedProducts}
+            products={visibleProducts}
             loading={loading}
             onAddToCart={handleAddToCart}
             onOrderNow={handleOrderNow}
             totalResults={filteredProducts.length}
-            currentPage={currentPage}
-            totalPages={totalPages}
           />
 
-          <Pagination
-            currentPage={currentPage}
-            totalPages={totalPages}
-            onPageChange={handlePageChange}
-          />
+          {/* Scroll Sentinel */}
+          <div ref={loaderRef} className="py-8 flex justify-center">
+            {isFetching && (
+              <div className="flex items-center gap-2 text-slate-400 text-xs font-semibold">
+                <span className="w-4 h-4 border-2 border-slate-300 border-t-[#FF620A] rounded-full animate-spin" />
+                Loading more...
+              </div>
+            )}
+            {!hasMore && !loading && filteredProducts.length > 0 && (
+              <p className="text-xs text-slate-400 font-semibold">
+                সব {filteredProducts.length} টি product দেখানো হয়েছে
+              </p>
+            )}
+          </div>
         </div>
       </div>
 
-      {/* Mobile Filter Drawer */}
       {mobileFilterOpen && (
         <div className="fixed inset-0 z-[999] lg:hidden">
           <div

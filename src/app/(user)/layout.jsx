@@ -60,7 +60,7 @@ const { user, logout } = useAuth();
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/40 backdrop-blur-sm z-[60] lg:hidden"
+          className="fixed inset-0 bg-slate-900/40   lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}

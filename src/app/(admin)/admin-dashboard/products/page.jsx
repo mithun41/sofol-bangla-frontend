@@ -11,6 +11,7 @@ import AddProductModal from "../../components/AddProductModal";
 import EditProductModal from "../../components/EditProductModal";
 import toast, { Toaster } from "react-hot-toast";
 import { useReactToPrint } from "react-to-print";
+import InventoryPDFButton from "./InventoryPDFButton";
 
 // ────────────────────────────────────────────────
 // Barcode slip — এটাই print হবে
@@ -20,44 +21,26 @@ function BarcodeSlip({ product }) {
   return (
     <div
       style={{
-        width: "100%", 
-        height: "100%", // পুরো স্টিকারের উচ্চতা নিবে
+        width: "50mm",
         padding: "1mm 2mm",
+        fontFamily: "monospace",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        justifyContent: "space-between", // উপর-নিচ সমানভাবে ছড়াবে
-        boxSizing: "border-box",
+        gap: 0,
       }}
     >
-      <div style={{ textAlign: "center", width: "100%" }}>
-        <p style={{ 
-          fontSize: "10pt", 
-          fontWeight: "bold", 
-          margin: "0 0 1mm 0", 
-          lineHeight: "1",
-          wordBreak: "break-all"
-        }}>
-          {product.name}
-        </p>
-        <p style={{ fontSize: "9pt", fontWeight: "bold", margin: 0 }}>
-          Price: ৳{Number(product.price).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}
-        </p>
-      </div>
-
-      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
-        <img
-          src={product.barcode_image}
-          alt="barcode"
-          style={{ 
-            width: "100%", 
-            height: "30mm", // বারকোড বড় করার জন্য
-            objectFit: "fill",
-            display: "block"
-          }}
-        />
-        
-      </div>
+      <p style={{ fontSize: "6pt", fontWeight: "bold", textAlign: "center", margin: 0, lineHeight: "1.2", wordBreak: "break-word", width: "100%" }}>
+        {product.name}
+      </p>
+      <p style={{ fontSize: "6pt", margin: "0.5mm 0 0.5mm 0", lineHeight: "1", textAlign: "center" }}>
+        Price: ৳{Math.floor(Number(product.price))}
+      </p>
+      <img
+        src={product.barcode_image}
+        alt="barcode"
+        style={{ width: "70%", height: "auto", maxHeight: "10mm", objectFit: "contain", display: "block", margin: 0 }}
+      />
     </div>
   );
 }
@@ -79,21 +62,15 @@ export default function ManageProducts() {
   const barcodePrintRef = useRef();
 
   // useReactToPrint — onAfterPrint এ cleanup
- const handlePrint = useReactToPrint({
+  const handlePrint = useReactToPrint({
     contentRef: barcodePrintRef,
     pageStyle: `
       @page {
-        size: 58mm 45mm landscape; /* landscape দিলে রোটেশন ঠিক হওয়ার কথা */
+        size: 50mm auto;   /* slip width, height auto */
         margin: 0;
       }
       @media print {
-        html, body {
-          height: 45mm;
-          width: 58mm;
-          margin: 0 !important;
-          padding: 0 !important;
-          overflow: hidden;
-        }
+        body { margin: 0; }
       }
     `,
     onAfterPrint: () => setPrintProduct(null),
@@ -182,12 +159,15 @@ export default function ManageProducts() {
             Managing {products.length} Products
           </p>
         </div>
-        <button
-          onClick={() => setIsModalOpen(true)}
-          className="bg-slate-900 dark:bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl flex items-center gap-2"
-        >
-          <Plus size={18} /> Add Product
-        </button>
+        <div className="flex items-center gap-3">
+          <InventoryPDFButton products={filteredProducts} filterStatus={filterStatus} />
+          <button
+            onClick={() => setIsModalOpen(true)}
+            className="bg-slate-900 dark:bg-blue-600 text-white px-6 py-3 rounded-2xl font-black text-xs uppercase tracking-widest hover:opacity-90 transition-all shadow-xl flex items-center gap-2"
+          >
+            <Plus size={18} /> Add Product
+          </button>
+        </div>
       </div>
 
       {/* Search + Filter */}
@@ -223,112 +203,139 @@ export default function ManageProducts() {
         </div>
       </div>
 
-      {/* Table */}
-      <div className="bg-white dark:bg-slate-900 rounded-[2.5rem] border border-slate-200 dark:border-slate-800 overflow-hidden shadow-xl">
+            {/* Table */}
+      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800 overflow-hidden shadow-sm">
+        {/* Legend bar */}
+        <div className="px-6 py-3.5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between">
+          <p className="text-xs font-black text-slate-500 uppercase tracking-widest">
+            Showing <span className="text-slate-800 dark:text-white">{filteredProducts.length}</span> products
+          </p>
+          <div className="flex items-center gap-4 text-[10px] font-bold text-slate-400">
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" /> In Stock</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-amber-400 inline-block" /> Low</span>
+            <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-full bg-rose-400 inline-block" /> Out</span>
+          </div>
+        </div>
+
         <div className="overflow-x-auto">
           <table className="w-full text-left">
-            <thead className="bg-slate-50/50 dark:bg-slate-800/50 border-b">
-              <tr>
-                {["Fav", "Product", "Barcode", "Stock", "Price / PV", "Action"].map((h) => (
-                  <th key={h} className={`px-6 py-5 text-[10px] font-black uppercase text-slate-400 tracking-widest ${h === "Action" ? "text-right" : ""}`}>
-                    {h}
+            <thead>
+              <tr className="bg-slate-50 dark:bg-slate-800/60">
+                {[
+                  { label: "Fav" }, { label: "Product" }, { label: "Barcode" },
+                  { label: "Stock" }, { label: "Price" }, { label: "PV" },
+                  { label: "Actions", right: true },
+                ].map((h) => (
+                  <th key={h.label} className={`px-5 py-4 text-[10px] font-black uppercase tracking-widest text-slate-400 ${h.right ? "text-right" : ""}`}>
+                    {h.label}
                   </th>
                 ))}
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+            <tbody>
               {loading ? (
                 Array.from({ length: 6 }).map((_, i) => (
-                  <tr key={i} className="animate-pulse">
-                    {Array.from({ length: 6 }).map((_, j) => (
-                      <td key={j} className="px-6 py-4">
-                        <div className="h-4 bg-slate-100 rounded-lg w-3/4" />
+                  <tr key={i} className="border-t border-slate-50 dark:border-slate-800/60 animate-pulse">
+                    {Array.from({ length: 7 }).map((_, j) => (
+                      <td key={j} className="px-5 py-4">
+                        <div className="h-3.5 bg-slate-100 dark:bg-slate-800 rounded-lg w-3/4" />
                       </td>
                     ))}
                   </tr>
                 ))
               ) : filteredProducts.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="text-center py-16 text-slate-400 text-sm font-bold">
+                  <td colSpan={7} className="text-center py-20 text-slate-400 text-sm font-bold">
                     No products found
                   </td>
                 </tr>
               ) : (
                 filteredProducts.map((p) => {
-                  const badge = getStockBadge(p.stock);
+                  const badge     = getStockBadge(p.stock);
+                  const stock     = Number(p.stock ?? 0);
+                  const dotColor  = stock <= 0 ? "bg-rose-500" : stock < 5 ? "bg-amber-400" : "bg-emerald-400";
+                  const priceText = stock <= 0 ? "text-rose-500" : stock < 5 ? "text-amber-600 dark:text-amber-400" : "text-slate-700 dark:text-slate-200";
+
                   return (
-                    <tr key={p.id} className="group hover:bg-slate-50/50 transition-all">
-                      {/* Featured */}
-                      <td className="px-6 py-4">
-                        <button onClick={() => toggleFeatured(p)} className={p.is_featured ? "text-amber-400" : "text-slate-200"}>
-                          <Star size={18} fill={p.is_featured ? "currentColor" : "none"} />
+                    <tr key={p.id} className="border-t border-slate-50 dark:border-slate-800/60 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition-colors group">
+
+                      {/* Star */}
+                      <td className="px-5 py-4 w-10">
+                        <button onClick={() => toggleFeatured(p)} className={`transition-colors ${p.is_featured ? "text-amber-400" : "text-slate-200 hover:text-amber-300"}`}>
+                          <Star size={17} fill={p.is_featured ? "currentColor" : "none"} />
                         </button>
                       </td>
 
-                      {/* Product info */}
-                      <td className="px-6 py-4">
+                      {/* Product */}
+                      <td className="px-5 py-4 min-w-[200px]">
                         <div className="flex items-center gap-3">
-                          <img src={p.image} className="w-10 h-10 rounded-xl object-cover" alt={p.name} />
+                          <div className="relative shrink-0">
+                            <img src={p.image} className="w-11 h-11 rounded-xl object-cover bg-slate-100" alt={p.name} />
+                            <span className={`absolute -bottom-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-white dark:border-slate-900 ${dotColor}`} />
+                          </div>
                           <div>
-                            <p className="font-black text-xs">{p.name}</p>
-                            <p className="text-[9px] text-slate-400">{p.category_name || "General"}</p>
+                            <p className="font-black text-xs text-slate-800 dark:text-white leading-snug">{p.name}</p>
+                            <p className="text-[10px] text-slate-400 font-semibold mt-0.5">{p.category_name || "General"}</p>
                           </div>
                         </div>
                       </td>
 
-                      {/* Barcode + print button */}
-                      <td className="px-6 py-4">
+                      {/* Barcode */}
+                      <td className="px-5 py-4">
                         {p.barcode_image ? (
-                          <button
-                            onClick={() => triggerPrint(p)}
-                            className="group/btn flex flex-col items-start gap-1 relative"
-                            title="Click to print barcode"
-                          >
-                            <div className="relative">
-                              <img
-                                src={p.barcode_image}
-                                alt="barcode"
-                                className="h-7 w-auto group-hover/btn:opacity-40 transition-opacity"
-                              />
-                              <Printer
-                                size={14}
-                                className="absolute inset-0 m-auto text-blue-600 opacity-0 group-hover/btn:opacity-100 transition-opacity"
-                              />
+                          <button onClick={() => triggerPrint(p)} className="group/btn relative flex flex-col items-start gap-0.5" title="Print barcode">
+                            <div className="relative overflow-hidden rounded-lg">
+                              <img src={p.barcode_image} alt="barcode" className="h-7 w-auto group-hover/btn:opacity-30 transition-opacity" />
+                              <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/btn:opacity-100 transition-opacity">
+                                <Printer size={14} className="text-blue-600" />
+                              </div>
                             </div>
                             <p className="text-[9px] font-mono text-slate-400">{p.barcode_number}</p>
                           </button>
                         ) : (
-                          <span className="text-[9px] text-slate-300">No Barcode</span>
+                          <span className="text-[9px] text-slate-300 italic">No barcode</span>
                         )}
                       </td>
 
                       {/* Stock */}
-                      <td className="px-6 py-4">
-                        <span className={`px-3 py-1 rounded-lg text-[10px] font-black uppercase border ${badge.class}`}>
-                          {p.stock} — {badge.label}
+                      <td className="px-5 py-4">
+                        <div className="flex items-center gap-2">
+                          <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotColor}`} />
+                          <div>
+                            <p className={`text-xs font-black ${priceText}`}>{stock} pcs</p>
+                            <p className="text-[9px] text-slate-400 font-semibold">{badge.label}</p>
+                          </div>
+                        </div>
+                      </td>
+
+                      {/* Price */}
+                      <td className="px-5 py-4">
+                        <p className="text-xs font-black text-slate-800 dark:text-white">
+                          ৳{Number(p.price).toLocaleString()}
+                        </p>
+                      </td>
+
+                      {/* PV */}
+                      <td className="px-5 py-4">
+                        <span className="px-2.5 py-1 bg-emerald-50 dark:bg-emerald-900/20 text-emerald-700 dark:text-emerald-400 text-[10px] font-black rounded-lg">
+                          {p.point_value} PV
                         </span>
                       </td>
 
-                      {/* Price / PV */}
-                      <td className="px-6 py-4">
-                        <p className="font-black text-xs">৳{Number(p.price).toLocaleString('en-IN', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}</p>
-                        <p className="text-[9px] font-bold text-emerald-500 uppercase">{p.point_value} PV</p>
-                      </td>
-
                       {/* Actions */}
-                      <td className="px-6 py-4 text-right">
-                        <div className="flex justify-end gap-1">
+                      <td className="px-5 py-4 text-right">
+                        <div className="flex justify-end gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
                           <button
                             onClick={() => { setSelectedProduct(p); setIsEditModalOpen(true); }}
-                            className="p-2 hover:text-blue-600 transition-colors"
+                            className="p-2 rounded-xl hover:bg-blue-50 dark:hover:bg-blue-900/20 hover:text-blue-600 text-slate-400 transition-all"
                           >
-                            <Edit size={16} />
+                            <Edit size={15} />
                           </button>
                           <button
                             onClick={() => handleDelete(p.id)}
-                            className="p-2 hover:text-rose-600 transition-colors"
+                            className="p-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-900/20 hover:text-rose-600 text-slate-400 transition-all"
                           >
-                            <Trash2 size={16} />
+                            <Trash2 size={15} />
                           </button>
                         </div>
                       </td>
@@ -338,22 +345,6 @@ export default function ManageProducts() {
               )}
             </tbody>
           </table>
-        </div>
-      </div>
-
-      {/* ── Hidden print area ─────────────────────────────
-          display:none এর বদলে visibility:hidden + position:absolute
-          কারণ display:none হলে কিছু browser print করে না       */}
-      <div
-        style={{
-          position: "absolute",
-          top: "-9999px",
-          left: "-9999px",
-          visibility: "hidden",
-        }}
-      >
-        <div ref={barcodePrintRef}>
-          <BarcodeSlip product={printProduct} />
         </div>
       </div>
 

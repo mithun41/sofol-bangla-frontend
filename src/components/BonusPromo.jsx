@@ -2,9 +2,9 @@ import { Star, Trophy } from "lucide-react";
 
 export default function BonusPromo() {
   const levels = [
-    { star: "4 Star", cash: "5,000" },
-    { star: "6 Star", cash: "30,000" },
-    { star: "8 Star", cash: "1,00,000" },
+    { star: "Leader", cash: "5,000" },
+    { star: "Sales Officer", cash: "30,000" },
+    { star: "Sr. Sales Officer", cash: "1,00,000" },
   ];
 
   return (

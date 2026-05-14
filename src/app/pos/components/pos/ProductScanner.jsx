@@ -64,7 +64,7 @@ export default function ProductScanner({
               searchResults.map((p) => (
                 <div
                   key={p.id}
-                  onClick={() => onSelectProduct(p)} // Dedicated handler call hocche
+                 onClick={() => onSelectProduct(p)}
                   className="p-4 hover:bg-blue-50 cursor-pointer border-b flex justify-between items-center"
                 >
                   <div>

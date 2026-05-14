@@ -1,227 +1,212 @@
 import React from "react";
 
-const ThermalInvoice = React.forwardRef(
-  (
-    {
-      orderData,
-      cart,
-      customer,
-      subtotal,
-      formatBDT,
-      getEffectivePrice,
-    },
-    ref
-  ) => {
-    if (!orderData) return null;
+const ThermalInvoice = React.forwardRef(({
+  orderData,
+  cart,
+  customer,
+  meta = {},
+  formatBDT,
+  getEffectivePrice,
+}, ref) => {
+  if (!orderData || !cart?.length) return null;
 
-    const vatPercent = 0;
-    const vatAmount = subtotal * (vatPercent / 100);
-    const grandTotal = subtotal + vatAmount;
-    const now = new Date();
+  const {
+    subtotal         = 0,
+    discountAmount   = 0,
+    payable          = 0,
+    cashTendered     = 0,
+    changeAmount     = 0,
+    discountType,
+    discountValue,
+  } = meta;
 
-    return (
-      <div
-        ref={ref}
-        className="thermal-invoice-container"
-      >
-        {/* ── Store Header ── */}
-        <div className="inv-header">
-          <div className="inv-store-name">Sofol Bangla Shop</div>
-          <div className="inv-store-meta">Road-12, Sector-07, Uttara, Dhaka</div>
-          <div className="inv-store-meta">BIN: 001234567-0101</div>
-          <div className="inv-store-meta">Phone: 017XXXXXXXX</div>
-          <div className="inv-divider-dashed" />
-          <div className="inv-title">CASH MEMO</div>
+  const now = new Date();
+
+  const discountLabel = discountAmount > 0
+    ? discountType === "percent"
+      ? `Discount (${discountValue}%)`
+      : "Discount"
+    : null;
+
+  return (
+    <div 
+      ref={ref} 
+      className="w-[80mm] bg-white text-black font-mono text-[11px] leading-relaxed p-4 selection:bg-transparent print:w-[80mm] print:p-4 print:mx-auto"
+      style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+    >
+      {/* ── Store Header ── */}
+      <div className="text-center mb-2.5 text-black">
+        <div className="text-[16px] font-black uppercase tracking-wider text-black">
+          Sofol Bangla Shop
         </div>
-
-        {/* ── Order Info ── */}
-        <div className="inv-meta-block">
-          <div className="inv-meta-row">
-            <span>Order: #{orderData.id || orderData.order_id}</span>
-            <span>{now.toLocaleDateString("en-BD")}</span>
-          </div>
-          <div className="inv-meta-line">Time: {now.toLocaleTimeString("en-BD")}</div>
-          <div className="inv-meta-line">
-            Customer: {customer?.name || customer?.username || "Guest Customer"}
-          </div>
-          {customer?.phone && (
-            <div className="inv-meta-line">Phone: {customer.phone}</div>
-          )}
+        <div className="text-[9.5px] font-bold text-black">
+          Road-12, Sector-07, Uttara, Dhaka
         </div>
-
-        <div className="inv-divider-dashed" />
-
-        {/* ── Table Header ── */}
-        <div className="inv-table-head">
-          <div className="col-item">ITEM</div>
-          <div className="col-qty">QTY</div>
-          <div className="col-price">PRICE</div>
-          <div className="col-total">TOTAL</div>
+        <div className="text-[9.5px] font-bold text-black">
+          Phone: 017XXXXXXXX
         </div>
-        <div className="inv-divider-dashed" />
+        <div className="border-t border-dashed border-black my-1.5" />
+        <div className="text-[12px] font-black tracking-widest text-black">
+          CASH MEMO
+        </div>
+      </div>
 
-        {/* ── Line Items ── */}
-        <div className="inv-items">
-          {cart.map((item, index) => {
-            const unitPrice = getEffectivePrice
-              ? getEffectivePrice(item)
-              : item.price || 0;
-            const itemTotal = unitPrice * item.quantity;
+      {/* ── Order Info ── */}
+      <div className="mb-1 flex flex-col gap-0.5 text-[10px] font-bold text-black">
+        <div className="flex justify-between text-black">
+          <span className="text-black">Order #: {orderData.id || orderData.order_id}</span>
+          <span className="text-black">{now.toLocaleDateString("en-BD")}</span>
+        </div>
+        <div className="flex justify-between text-black">
+          <span className="text-black">Time: {now.toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" })}</span>
+          <span className="text-black">{customer?.status?.toUpperCase()}</span>
+        </div>
+        <div className="text-black">
+          Customer: {customer?.name || customer?.username || "Guest"}
+        </div>
+        {customer?.phone && (
+          <div className="text-black">Phone: {customer.phone}</div>
+        )}
+      </div>
 
-            return (
-              <div key={index} className="inv-item-row">
-                <div className="col-item">
-                  <span>{item.name}</span>
-                  {customer?.status === "active" && (
-                    <span className="inv-member-tag">(Member Disc.)</span>
-                  )}
-                </div>
-                <div className="col-qty">{item.quantity}</div>
-                <div className="col-price">{Number(unitPrice).toFixed(0)}</div>
-                <div className="col-total">{Number(itemTotal).toFixed(0)}</div>
+      <div className="border-t border-dashed border-black my-1.5" />
+
+      {/* ── Table Header ── */}
+      <div className="flex text-[10px] font-black text-black mb-0.5">
+        <div className="flex-1 pr-1 text-black">ITEM</div>
+        <div className="w-[22px] text-center text-black shrink-0">QTY</div>
+        <div className="w-[38px] text-right text-black shrink-0">RATE</div>
+        <div className="w-[44px] text-right text-black shrink-0">AMT</div>
+      </div>
+      
+      <div className="border-t border-dashed border-black my-1.5" />
+
+      {/* ── Line Items ── */}
+      <div className="flex flex-col gap-1 text-black">
+        {cart.map((item, idx) => {
+          const unitPrice  = getEffectivePrice ? getEffectivePrice(item) : Number(item.price || 0);
+          const itemTotal  = unitPrice * item.quantity;
+          const origPrice  = Number(item.price || 0);
+          const hasDisc    = customer?.status?.toLowerCase() === "active" && unitPrice < origPrice;
+
+          return (
+            <div key={idx} className="flex text-[10px] font-bold text-black items-start">
+              <div className="flex-1 pr-1 break-all text-black">
+                <span className="text-black">{item.name}</span>
+                {hasDisc && (
+                  <span className="block text-[8px] font-black mt-0.5 text-black">
+                    MRP: {Number(origPrice).toFixed(0)} | Disc: {(origPrice - unitPrice).toFixed(0)} off
+                  </span>
+                )}
               </div>
-            );
-          })}
-        </div>
-
-        <div className="inv-divider-dashed inv-divider-mt" />
-
-        {/* ── Totals ── */}
-        <div className="inv-totals">
-          <div className="inv-total-row">
-            <span>Subtotal:</span>
-            <span>{formatBDT(subtotal)}</span>
-          </div>
-          {vatAmount > 0 && (
-            <div className="inv-total-row">
-              <span>VAT ({vatPercent}%):</span>
-              <span>{formatBDT(vatAmount)}</span>
+              <div className="w-[22px] text-center text-black shrink-0">{item.quantity}</div>
+              <div className="w-[38px] text-right text-black shrink-0">{Number(unitPrice).toFixed(0)}</div>
+              <div className="w-[44px] text-right font-black text-black shrink-0">{Number(itemTotal).toFixed(0)}</div>
             </div>
-          )}
-          <div className="inv-grand-total">
-            <span>GRAND TOTAL</span>
-            <span>{formatBDT(grandTotal)}</span>
-          </div>
-          <div className="inv-payment-row">
-            <span>Paid Via:</span>
-            <span>{(orderData.payment_method || "Cash").toUpperCase()}</span>
-          </div>
-        </div>
+          );
+        })}
+      </div>
 
-        {/* ── Points earned ── */}
-        {orderData.added_points > 0 && (
-          <div className="inv-points-box">
-            Points Earned: {orderData.added_points}
+      <div className="border-t border-dashed border-black mt-2 mb-1.5" />
+
+      {/* ── Totals ── */}
+      <div className="flex flex-col gap-1 text-[10.5px] font-bold text-black">
+        {/* MRP subtotal */}
+        {meta.totalMemberSavings > 0 && (
+          <div className="flex justify-between text-[9.5px] text-black font-black">
+            <span>MRP Total:</span>
+            <span>{formatBDT(subtotal + (meta.totalMemberSavings || 0))}</span>
           </div>
         )}
 
-        {/* ── Footer ── */}
-        <div className="inv-footer">
-          <div className="inv-divider-dashed inv-divider-mt" />
-          <div className="inv-thanks">Thank You!</div>
-          <div className="inv-footer-note">Goods sold are not returnable.</div>
-          <div className="inv-dev-note">Developed by: Mithun / Sofol Bangla</div>
+        {/* Member discount */}
+        {meta.totalMemberSavings > 0 && (
+          <div className="flex justify-between font-black text-black">
+            <span>★ Member Discount:</span>
+            <span>- {formatBDT(meta.totalMemberSavings)}</span>
+          </div>
+        )}
+
+        <div className="flex justify-between text-black">
+          <span>Subtotal:</span>
+          <span>{formatBDT(subtotal)}</span>
         </div>
 
-        {/* ── Styles ── */}
-        <style dangerouslySetInnerHTML={{ __html: `
-          .thermal-invoice-container {
-            width: 80mm;
-            padding: 6mm 4mm;
-            background: #fff;
-            color: #000;
-            font-family: 'Courier New', Courier, monospace;
-            font-size: 11px;
-            line-height: 1.45;
-          }
+        {/* Manual discount */}
+        {discountAmount > 0 && (
+          <div className="flex justify-between font-black text-black">
+            <span>{discountLabel}:</span>
+            <span>- {formatBDT(discountAmount)}</span>
+          </div>
+        )}
 
-          /* Header */
-          .inv-header { text-align: center; margin-bottom: 10px; }
-          .inv-store-name { font-size: 15px; font-weight: 900; text-transform: uppercase; letter-spacing: 0.04em; }
-          .inv-store-meta { font-size: 9.5px; }
-          .inv-title { font-size: 12px; font-weight: 700; margin-top: 2px; }
+        {/* Grand Total */}
+        <div className="flex justify-between font-black text-[14px] border-t-2 border-b border-black my-1 py-1 text-black">
+          <span>NET PAYABLE</span>
+          <span>{formatBDT(payable)}</span>
+        </div>
 
-          /* Divider */
-          .inv-divider-dashed {
-            border: none;
-            border-top: 1px dashed #000;
-            margin: 6px 0;
-          }
-          .inv-divider-mt { margin-top: 10px; }
+        {cashTendered > 0 && (
+          <>
+            <div className="flex justify-between text-black">
+              <span>Cash Received:</span>
+              <span>{formatBDT(cashTendered)}</span>
+            </div>
+            <div className="flex justify-between font-black text-black">
+              <span>Change:</span>
+              <span>{formatBDT(changeAmount)}</span>
+            </div>
+          </>
+        )}
 
-          /* Meta block */
-          .inv-meta-block { margin-bottom: 6px; }
-          .inv-meta-row { display: flex; justify-content: space-between; font-size: 10px; }
-          .inv-meta-line { font-size: 10px; }
-
-          /* Table */
-          .inv-table-head,
-          .inv-item-row {
-            display: flex;
-            font-size: 10px;
-            align-items: flex-start;
-          }
-          .inv-table-head { font-weight: 700; margin-bottom: 2px; }
-
-          .col-item  { flex: 1; padding-right: 4px; word-break: break-word; }
-          .col-qty   { width: 22px; text-align: center; flex-shrink: 0; }
-          .col-price { width: 40px; text-align: right; flex-shrink: 0; }
-          .col-total { width: 46px; text-align: right; flex-shrink: 0; font-weight: 700; }
-
-          .inv-items { display: flex; flex-direction: column; gap: 4px; }
-          .inv-member-tag { display: block; font-size: 8px; font-style: italic; opacity: 0.6; }
-
-          /* Totals */
-          .inv-totals { display: flex; flex-direction: column; gap: 3px; font-size: 10px; }
-          .inv-total-row { display: flex; justify-content: space-between; }
-          .inv-grand-total {
-            display: flex;
-            justify-content: space-between;
-            font-weight: 900;
-            font-size: 13px;
-            border-top: 1px solid #000;
-            margin-top: 4px;
-            padding-top: 4px;
-          }
-          .inv-payment-row {
-            display: flex;
-            justify-content: space-between;
-            font-size: 10px;
-            margin-top: 4px;
-          }
-
-          /* Points */
-          .inv-points-box {
-            margin-top: 8px;
-            text-align: center;
-            border: 1px solid #000;
-            border-radius: 3px;
-            padding: 4px;
-            font-size: 10px;
-            font-weight: 700;
-          }
-
-          /* Footer */
-          .inv-footer { text-align: center; margin-top: 10px; }
-          .inv-thanks { font-size: 13px; font-weight: 900; }
-          .inv-footer-note { font-size: 9px; margin-top: 2px; }
-          .inv-dev-note { font-size: 8px; margin-top: 6px; font-style: italic; opacity: 0.45; }
-
-          /* Print overrides */
-          @media print {
-            @page { size: 80mm auto; margin: 0; }
-            body { margin: 0; padding: 0; background: #fff; }
-            .thermal-invoice-container {
-              width: 80mm;
-              padding: 8mm 4mm;
-              margin: 0 auto;
-            }
-          }
-        ` }} />
+        <div className="flex justify-between text-[10px] mt-0.5 text-black">
+          <span>Payment:</span>
+          <span>{(orderData.payment_method || "CASH").toUpperCase()}</span>
+        </div>
       </div>
-    );
-  }
-);
+
+      {/* ── Savings summary ── */}
+      {(meta.totalMemberSavings > 0 || discountAmount > 0) && (
+        <div className="border border-black mt-2.5 p-1 text-black">
+          <div className="font-black text-center mb-0.5 text-black">
+            🎁 আপনি সাশ্রয় করেছেন
+          </div>
+          {meta.totalMemberSavings > 0 && (
+            <div className="flex justify-between font-bold text-black">
+              <span>Member Discount:</span>
+              <span>{formatBDT(meta.totalMemberSavings)}</span>
+            </div>
+          )}
+          {discountAmount > 0 && (
+            <div className="flex justify-between font-bold text-black">
+              <span>Special Discount:</span>
+              <span>{formatBDT(discountAmount)}</span>
+            </div>
+          )}
+          <div className="flex justify-between font-black text-[12px] border-t border-dashed border-black mt-1 pt-1 text-black">
+            <span>TOTAL SAVINGS:</span>
+            <span>{formatBDT((meta.totalMemberSavings || 0) + discountAmount)}</span>
+          </div>
+        </div>
+      )}
+
+      {/* ── Points earned ── */}
+      {Number(orderData.added_points) > 0 && (
+        <div className="mt-2 text-center border border-black border-dashed rounded-[2px] p-1 text-[10px] font-black text-black">
+          🎯 Points Earned: +{Number(orderData.added_points).toFixed(0)} PV
+        </div>
+      )}
+
+      {/* ── Footer ── */}
+      <div className="text-center mt-2 text-black">
+        <div className="border-t border-dashed border-black mt-2 mb-1.5" />
+        <div className="text-[12px] font-black text-black">ধন্যবাদ! আবার আসবেন</div>
+        <div className="text-[9px] mt-0.5 font-black text-black">পণ্য বিক্রয়ের পরে ফেরত নেওয়া হয় না।</div>
+        <div className="text-[8px] mt-1 font-bold text-black">Sofol Bangla — sofolbangla.com</div>
+      </div>
+    </div>
+  );
+});
 
 ThermalInvoice.displayName = "ThermalInvoice";
 export default ThermalInvoice;

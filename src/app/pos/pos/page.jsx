@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useState, useRef, useCallback, useReducer } from "react";
 import { useCart } from "@/context/CartContext";
 import { toast, Toaster } from "react-hot-toast";
 import api from "@/services/api";
 import { useReactToPrint } from "react-to-print";
+import Swal from "sweetalert2";
 
 import CustomerSearch from "../components/pos/CustomerSearch";
 import ProductScanner from "../components/pos/ProductScanner";
@@ -12,262 +13,356 @@ import CartTable from "../components/pos/CartTable";
 import OrderSummary from "../components/pos/OrderSummary";
 import QuickRegister from "../components/pos/QuickRegister";
 import ThermalInvoice from "../components/pos/ThermalInvoice";
-import Swal from "sweetalert2";
+import HeldOrders from "../components/pos/HeldOrders";
 
-// ─── Formatter ────────────────────────────────────────────────────────────────
-const formatBDT = (value) => {
+// ── Formatter ──────────────────────────────────────────────────────────────────
+export const formatBDT = (value) => {
   const n = Number(value || 0);
-  return `৳${n.toFixed(2).replace(/\.00$/, "")}`;
+  return `৳${n.toLocaleString("en-IN", { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`;
+};
+
+// ── Held Orders Reducer ────────────────────────────────────────────────────────
+const heldReducer = (state, action) => {
+  switch (action.type) {
+    case "HOLD":
+      return [...state, { id: Date.now(), ...action.payload }];
+    case "RESTORE":
+      return state.filter((o) => o.id !== action.id);
+    case "DELETE":
+      return state.filter((o) => o.id !== action.id);
+    default:
+      return state;
+  }
 };
 
 export default function POSPage() {
+  const { cart, addToCart, updateQuantity, removeFromCart, clearCart, restoreCart } = useCart();
 
-  const [barcode, setBarcode] = useState("");
-  const [scanLoading, setScanLoading] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
+  // ── Scan / Search ─────────────────────────────────────────────────────────────
+  const [barcode, setBarcode]             = useState("");
+  const [scanLoading, setScanLoading]     = useState(false);
+  const [searchQuery, setSearchQuery]     = useState("");
   const [searchResults, setSearchResults] = useState([]);
-  const [searchOpen, setSearchOpen] = useState(false);
+  const [searchOpen, setSearchOpen]       = useState(false);
   const [searchLoading, setSearchLoading] = useState(false);
 
-  const [customerSearch, setCustomerSearch] = useState("");
-  const [customers, setCustomers] = useState([]);
+  // ── Customer ──────────────────────────────────────────────────────────────────
+  const [customerSearch, setCustomerSearch]     = useState("");
+  const [customers, setCustomers]               = useState([]);
   const [selectedCustomer, setSelectedCustomer] = useState(null);
-  const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Print state
-  const [lastOrder, setLastOrder] = useState(null);
-  const [printCart, setPrintCart] = useState([]);
-  const invoiceRef = useRef();
-  const barcodeRef = useRef(null);
-  const beepRef = useRef(null);
-  const [isAdding, setIsAdding] = useState(false); 
+  // ── Payment ───────────────────────────────────────────────────────────────────
+  const [discountType, setDiscountType]   = useState("flat");
+  const [discountValue, setDiscountValue] = useState("");
+  const [cashTendered, setCashTendered]   = useState("");
+
+  // ── Exchange ──────────────────────────────────────────────────────────────────
+  const [showExchange, setShowExchange]         = useState(false);
+  const [exchangeCredit, setExchangeCredit]     = useState(0);
+  const [exchangeItems, setExchangeItems]       = useState([]);   // returned items snapshot
+  const [exchangeOrderRef, setExchangeOrderRef] = useState(null); // original order id
+
+  // ── UI ────────────────────────────────────────────────────────────────────────
+  const [isSubmitting, setIsSubmitting]   = useState(false);
+  const [showHeld, setShowHeld]           = useState(false);
+  const [heldOrders, dispatch]            = useReducer(heldReducer, []);
+
+  // ── Print ─────────────────────────────────────────────────────────────────────
+  const [lastOrder, setLastOrder]   = useState(null);
+  const [printCart, setPrintCart]   = useState([]);
+  const [printMeta, setPrintMeta]   = useState({});
+  const invoiceRef                  = useRef();
+  const barcodeRef                  = useRef(null);
+  const beepRef                     = useRef(null);
 
   const handlePrint = useReactToPrint({ contentRef: invoiceRef });
-const [cart, setCart] = useState([]);
 
-  const addToCart = (product, quantity = 1) => {
-    setCart((prev) => {
-      const existing = prev.find((i) => i.id === product.id);
-      if (existing) {
-        return prev.map((i) =>
-          i.id === product.id
-            ? { ...i, quantity: i.quantity + quantity }
-            : i
-        );
-      }
-      return [
-        ...prev,
-        {
-          ...product,
-          cartItemId: product.id,
-          quantity,
-          point_value: Number(product.point_value || 0),
-          item_subtotal: Number(product.price) * quantity,
-        },
-      ];
-    });
-  };
+  // ── Calculated values ──────────────────────────────────────────────────────────
+  const getEffectivePrice = useCallback((item) => {
+    const base = parseFloat(item.price || 0);
+    const pv   = parseFloat(item.point_value || 0);
+    const isActiveMember = selectedCustomer?.status?.toLowerCase() === "active";
+    return isActiveMember ? base - pv * 2 : base;
+  }, [selectedCustomer]);
 
-  const updateQuantity = (id, cartItemId, change) => {
-    setCart((prev) =>
-      prev
-        .map((i) => i.id === id ? { ...i, quantity: i.quantity + change } : i)
-        .filter((i) => i.quantity > 0)
-    );
-  };
+  const getMemberSavingPerItem = useCallback((item) => {
+    const base = parseFloat(item.price || 0);
+    const pv   = parseFloat(item.point_value || 0);
+    const isActiveMember = selectedCustomer?.status?.toLowerCase() === "active";
+    return isActiveMember ? pv * 2 : 0;
+  }, [selectedCustomer]);
 
-  const removeFromCart = (id) => {
-    setCart((prev) => prev.filter((i) => i.id !== id));
-  };
+  const subtotal = cart.reduce((acc, item) => acc + getEffectivePrice(item) * item.quantity, 0);
 
-  const clearCart = () => setCart([]);
-  // ── অটো ফোকাস লজিক ──────────────────
+  const totalMemberSavings = cart.reduce(
+    (acc, item) => acc + getMemberSavingPerItem(item) * item.quantity, 0
+  );
+
+  const discountAmount = (() => {
+    const val = parseFloat(discountValue) || 0;
+    if (!val) return 0;
+    if (discountType === "percent") return Math.min((subtotal * val) / 100, subtotal);
+    return Math.min(val, subtotal);
+  })();
+
+  const payable        = Math.max(subtotal - discountAmount - exchangeCredit, 0);
+  const tendered       = parseFloat(cashTendered) || 0;
+  const changeAmount   = Math.max(tendered - payable, 0);
+
+  // ── Focus logic ────────────────────────────────────────────────────────────────
   useEffect(() => {
     const handleGlobalClick = (e) => {
       const active = document.activeElement;
-      const isAlreadyTyping =
-        active.tagName === "INPUT" ||
-        active.tagName === "TEXTAREA" ||
-        active.tagName === "SELECT" ||
-        active.isContentEditable;
-
-      if (isAlreadyTyping) return;
-
-      const clickedElement = e.target;
+      const isTyping = ["INPUT", "TEXTAREA", "SELECT"].includes(active?.tagName) || active?.isContentEditable;
+      if (isTyping) return;
+      const clicked = e.target;
       const isInteractive =
-        clickedElement.tagName === "INPUT" ||
-        clickedElement.tagName === "TEXTAREA" ||
-        clickedElement.tagName === "SELECT" ||
-        clickedElement.closest("button") ||
-        clickedElement.closest(".customer-dropdown") ||
-        clickedElement.closest(".swal2-container");
-
+        ["INPUT", "TEXTAREA", "SELECT"].includes(clicked.tagName) ||
+        clicked.closest("button") ||
+        clicked.closest(".customer-dropdown") ||
+        clicked.closest(".swal2-container");
       if (!isInteractive) {
         setTimeout(() => {
-          if (document.activeElement.tagName === "BODY" || document.activeElement.tagName === "DIV") {
+          if (["BODY", "DIV"].includes(document.activeElement?.tagName)) {
             barcodeRef.current?.focus();
           }
         }, 50);
       }
     };
-
     window.addEventListener("mouseup", handleGlobalClick);
     return () => window.removeEventListener("mouseup", handleGlobalClick);
   }, []);
 
-  const getEffectivePrice = (item) => {
-    const basePrice = parseFloat(item.price || 0);
-    const pv = parseFloat(item.point_value || 0);
-    const isMemberActive = selectedCustomer?.status?.toLowerCase() === "active";
-    return isMemberActive ? basePrice - pv * 2 : basePrice;
-  };
-
-  const dynamicSubtotal = useMemo(() => {
-    return cart.reduce((acc, item) => acc + getEffectivePrice(item) * item.quantity, 0);
-  }, [cart, selectedCustomer]);
-
-  // ── Customer search ──
+  // ── Keyboard shortcuts ──────────────────────────────────────────────────────
   useEffect(() => {
-    if (customerSearch.length < 2) {
-      setCustomers([]);
-      return;
-    }
+    const handleKeys = (e) => {
+      // Input এ টাইপ করার সময় শর্টকাট অফ থাকবে
+      if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+         // শুধুমাত্র এন্টার দিলে ফোকাস সরানোর জন্য (ঐচ্ছিক)
+         if(e.key === "Enter" && e.target.id === "barcode-input") return;
+      }
+
+      if (e.key === "F2")  { e.preventDefault(); handleNewSale(); }
+      if (e.key === "F4")  { e.preventDefault(); document.getElementById("discount-input")?.focus(); }
+      if (e.key === "F6")  { e.preventDefault(); document.getElementById("cash-input")?.focus(); }
+      if (e.key === "F8")  { e.preventDefault(); handleCheckout(); }
+      
+      // F9 এ ক্লিক করলে Held Orders লিস্ট দেখাবে
+      if (e.key === "F9")  { 
+        e.preventDefault(); 
+        setShowHeld(prev => !prev); 
+      }
+    };
+    window.addEventListener("keydown", handleKeys);
+    return () => window.removeEventListener("keydown", handleKeys);
+  }, [cart, selectedCustomer, payable, cashTendered, discountValue]);
+
+  // ── Customer search ────────────────────────────────────────────────────────────
+  useEffect(() => {
+    if (customerSearch.length < 2) { setCustomers([]); return; }
     const timer = setTimeout(async () => {
       try {
         const res = await api.get(`pos/customers/search/?q=${encodeURIComponent(customerSearch)}`);
         setCustomers(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-      }
+      } catch (err) { console.error(err); }
     }, 300);
     return () => clearTimeout(timer);
   }, [customerSearch]);
 
-  // ── Product search ──
+  // ── Product search ───────────────────────────────────────────────────────────
   useEffect(() => {
     const q = searchQuery.trim();
-    if (q.length < 2) {
-      setSearchResults([]);
-      setSearchOpen(false);
-      return;
-    }
+    if (q.length < 2) { setSearchResults([]); setSearchOpen(false); return; }
     setSearchLoading(true);
     setSearchOpen(true);
     const timer = setTimeout(async () => {
       try {
         const res = await api.get(`pos/products/search/?q=${encodeURIComponent(q)}`);
         setSearchResults(Array.isArray(res.data) ? res.data : []);
-      } catch (err) {
-        console.error(err);
-      } finally {
-        setSearchLoading(false);
-      }
+      } catch (err) { console.error(err); } finally { setSearchLoading(false); }
     }, 300);
     return () => clearTimeout(timer);
   }, [searchQuery]);
 
-  // ── ১. বারকোড স্ক্যানার হ্যান্ডলার (FIXED: handleScan name added) ──
- 
-
-const handleScan = async (e) => {
-  if (e) e.preventDefault();
-  const code = barcode.trim();
-  if (!code || scanLoading || isAdding) return; // ← isAdding guard
-
-  setScanLoading(true);
-  setIsAdding(true);
-  setBarcode("");
-
-  try {
-    const res = await api.get(`pos/products/search/?q=${encodeURIComponent(code)}`);
-    const product = Array.isArray(res.data) ? res.data[0] : res.data;
-
-    if (product) {
-      await addToCart(product); // ← await করো
-      playBeep();
-    } else {
-      toast.error("Product not found!");
-    }
-  } catch (err) {
-    toast.error("Scan failed!");
-  } finally {
-    setScanLoading(false);
-    setIsAdding(false);
-    barcodeRef.current?.focus();
-  }
-};
-
-  // ── ২. প্রোডাক্ট সিলেক্ট হ্যান্ডলার (Centralized logic) ──
-  const handleSelectProduct = (product) => {
-    if (product) {
-      addToCart(product);
-      playBeep();
-      setSearchOpen(false);
-      setSearchQuery("");
-      setBarcode(""); // স্ক্যানার ক্লিয়ার
-      setTimeout(() => barcodeRef.current?.focus(), 100);
+  // ── Barcode scan ─────────────────────────────────────────────────────────────
+  const handleScan = async (e) => {
+    e.preventDefault();
+    const code = barcode.trim();
+    if (!code || scanLoading) return;
+    setScanLoading(true);
+    try {
+      const res = await api.get(`pos/products/search/?q=${code}`);
+      const product = Array.isArray(res.data) ? res.data[0] : res.data;
+      if (product) {
+        addToCart(product);
+        playBeep();
+        setBarcode("");
+        toast.success(`${product.name} added!`, { duration: 800, position: "bottom-center" });
+      } else {
+        toast.error("Product not found!");
+        setBarcode("");
+      }
+    } catch { toast.error("Scan failed!"); setBarcode(""); }
+    finally {
+      setScanLoading(false);
+      setTimeout(() => barcodeRef.current?.focus(), 300);
     }
   };
 
+  // ── Exchange / Return ─────────────────────────────────────────────────────────
+  const handleExchangeConfirm = ({ credit, items, orderId }) => {
+    setExchangeCredit(credit);
+    setExchangeItems(items);
+    setExchangeOrderRef(orderId);
+    setShowExchange(false);
+    toast.success(`Exchange credit of ${formatBDT(credit)} applied!`, { icon: "🔄" });
+  };
+
+  const clearExchange = () => {
+    setExchangeCredit(0);
+    setExchangeItems([]);
+    setExchangeOrderRef(null);
+  };
+
+  // ── Hold Order (Summary থেকে কল করা হবে) ───────────────────────────────────────
+  const holdOrder = () => {
+    if (!cart.length) return;
+    dispatch({
+      type: "HOLD",
+      payload: {
+        cart: [...cart],
+        customer: selectedCustomer,
+        discount: { type: discountType, value: discountValue },
+        label: `Hold #${heldOrders.length + 1} — ${new Date().toLocaleTimeString()}`,
+      },
+    });
+    clearCart();
+    setSelectedCustomer(null);
+    setDiscountValue("");
+    setCashTendered("");
+    clearExchange();
+    toast("Order held! F9 to see list.", { icon: "⏸️" });
+  };
+
+  const restoreHeld = (order) => {
+    if (cart.length > 0) {
+      toast.error("Clear current cart first!");
+      return;
+    }
+    restoreCart(order.cart);
+    setSelectedCustomer(order.customer);
+    setDiscountType(order.discount.type);
+    setDiscountValue(order.discount.value);
+    dispatch({ type: "RESTORE", id: order.id });
+    setShowHeld(false);
+    toast.success("Order restored!");
+  };
+
+  // ── New Sale ───────────────────────────────────────────────────────────────────
+  const handleNewSale = () => {
+    clearCart();
+    setSelectedCustomer(null);
+    setDiscountValue("");
+    setCashTendered("");
+    setBarcode("");
+    clearExchange();
+    setTimeout(() => barcodeRef.current?.focus(), 100);
+  };
+
+  // ── Quick register ─────────────────────────────────────────────────────────────
   const handleQuickRegisterSuccess = (res) => {
     const userData = res?.user_info || res?.userinfo || res?.user || res?.data || res;
     if (userData && (userData.id || userData.username)) {
       setSelectedCustomer(userData);
       setCustomerSearch("");
       setCustomers([]);
-      toast.success("Customer selected!");
+      toast.success(`${userData.name || userData.username} selected!`);
       setTimeout(() => barcodeRef.current?.focus(), 100);
+    } else {
+      toast.error("Registration done — please search manually.");
     }
   };
 
+  // ── Checkout ───────────────────────────────────────────────────────────────────
   const handleCheckout = async () => {
-    if (cart.length === 0 || !selectedCustomer) {
-      toast.error("Cart empty or customer not selected!");
-      return;
-    }
+    if (!cart.length)          return toast.error("Cart is empty!");
+    if (!selectedCustomer)     return toast.error("Select a customer!");
+    if (tendered > 0 && tendered < payable) return toast.error(`Cash short by ${formatBDT(payable - tendered)}!`);
 
     const result = await Swal.fire({
-      title: "Confirm Order?",
-      text: `Total: ${formatBDT(dynamicSubtotal)}`,
+      title: "Confirm Sale?",
+      html: `
+        <div style="text-align:left;font-size:14px;line-height:2">
+          <div style="display:flex;justify-content:space-between"><span>Subtotal:</span><b>${formatBDT(subtotal)}</b></div>
+          ${totalMemberSavings > 0 ? `<div style="display:flex;justify-content:space-between;color:#059669"><span>Member Savings:</span><b>- ${formatBDT(totalMemberSavings)}</b></div>` : ""}
+          ${discountAmount > 0 ? `<div style="display:flex;justify-content:space-between;color:#16a34a"><span>Discount:</span><b>- ${formatBDT(discountAmount)}</b></div>` : ""}
+          ${exchangeCredit > 0 ? `<div style="display:flex;justify-content:space-between;color:#7c3aed"><span>Exchange Credit:</span><b>- ${formatBDT(exchangeCredit)}</b></div>` : ""}
+          <div style="display:flex;justify-content:space-between;font-size:16px;border-top:1px solid #e2e8f0;margin-top:8px;padding-top:8px"><span><b>Payable:</b></span><b>${formatBDT(payable)}</b></div>
+          ${tendered > 0 ? `<div style="display:flex;justify-content:space-between"><span>Cash:</span><b>${formatBDT(tendered)}</b></div>` : ""}
+          ${changeAmount > 0 ? `<div style="display:flex;justify-content:space-between;color:#2563eb"><span>Change:</span><b>${formatBDT(changeAmount)}</b></div>` : ""}
+        </div>`,
       icon: "question",
       showCancelButton: true,
       confirmButtonColor: "#0f172a",
+      cancelButtonColor: "#f43f5e",
+      confirmButtonText: "✅ Confirm Sale",
+      cancelButtonText: "Cancel",
+      customClass: { popup: "rounded-3xl" },
     });
 
     if (!result.isConfirmed) return;
 
     const orderData = {
-      customer_id: selectedCustomer.id,
-      payment_method: "Cash",
+      customer_id:      selectedCustomer.id,
+      payment_method:   "Cash",
+      discount_amount:  discountAmount,
+      exchange_credit:  exchangeCredit,
+      exchange_order_ref: exchangeOrderRef,
+      exchange_items:   exchangeItems,
       items: cart.map((item) => ({
         product_id: item.id,
-        quantity: item.quantity,
-        price: getEffectivePrice(item),
+        quantity:   item.quantity,
+        price:      getEffectivePrice(item),
       })),
     };
 
     setIsSubmitting(true);
     try {
       const res = await api.post("pos/order/create/", orderData);
+
+      const meta = {
+        subtotal,
+        discountAmount,
+        payable,
+        cashTendered: tendered,
+        changeAmount,
+        discountType,
+        discountValue,
+        totalMemberSavings,
+        exchangeCredit,
+        exchangeItems,
+        exchangeOrderRef,
+        customerStatus: selectedCustomer?.status,
+      };
       setLastOrder(res.data);
       setPrintCart([...cart]);
-
-      Swal.fire({ title: "Success!", icon: "success", timer: 1500, showConfirmButton: false });
+      setPrintMeta(meta);
 
       setTimeout(async () => {
         await handlePrint();
-        clearCart();
-        setSelectedCustomer(null);
-        setBarcode("");
-        barcodeRef.current?.focus();
-      }, 1000);
+        handleNewSale();
+      }, 500);
+
+      Swal.fire({ title: "Sale Complete!", icon: "success", timer: 1500, showConfirmButton: false });
     } catch (err) {
-      toast.error(err.response?.data?.error || "Order failed!");
+      const msg = err.response?.data?.error || "Order failed!";
+      toast.error(msg);
     } finally {
       setIsSubmitting(false);
     }
   };
 
+  // ── Init ──────────────────────────────────────────────────────────────────────
   useEffect(() => {
     beepRef.current = new Audio("https://assets.mixkit.co/active_storage/sfx/2358/2358-preview.mp3");
     barcodeRef.current?.focus();
@@ -275,28 +370,67 @@ const handleScan = async (e) => {
 
   const playBeep = () => beepRef.current?.play().catch(() => {});
 
+  // ─────────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-slate-50 font-sans text-slate-900">
-      <Toaster position="top-right" />
+      <Toaster position="top-right" reverseOrder={false} />
 
-      <header className="bg-white border-b border-slate-100 px-8 py-4 flex items-center justify-between sticky top-0 z-40">
+      {/* ── Header ── */}
+      <header className="bg-white border-b border-slate-100 px-6 py-3 flex items-center justify-between sticky top-0 z-40">
         <div className="flex items-center gap-3">
           <div className="w-8 h-8 rounded-xl bg-slate-900 flex items-center justify-center">
             <span className="text-white text-xs font-black">SB</span>
           </div>
           <div>
-            <h1 className="font-black text-slate-900 text-sm leading-tight">Sofol Bangla Shop</h1>
-            <p className="text-[10px] font-semibold text-slate-400 uppercase tracking-widest">Point of Sale</p>
+            <h1 className="font-black text-slate-900 text-sm leading-tight">Sofol Bangla</h1>
+            <p className="text-[9px] font-semibold text-slate-400 uppercase tracking-widest">Point of Sale</p>
           </div>
         </div>
-        <div className="hidden md:flex items-center gap-2 text-xs font-semibold text-slate-400">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-          Terminal Active
+
+        <div className="flex items-center gap-3">
+          <div className="hidden lg:flex items-center gap-3 text-[9px] font-bold text-slate-400 bg-slate-50 px-3 py-1.5 rounded-xl border border-slate-100">
+            <span>F2 New</span><span>·</span>
+            <span>F4 Discount</span><span>·</span>
+            <span>F6 Cash</span><span>·</span>
+            <span>F8 Pay</span><span>·</span>
+            <span className="text-slate-900">F9 Held List</span>
+          </div>
+
+          {exchangeCredit > 0 && (
+            <button
+              onClick={clearExchange}
+              className="relative flex items-center gap-2 px-3 py-2 bg-violet-50 border border-violet-200 text-violet-700 rounded-xl text-xs font-black"
+            >
+              🔄 {formatBDT(exchangeCredit)} credit
+              <span className="ml-1 text-violet-400">✕</span>
+            </button>
+          )}
+
+          <button onClick={() => setShowHeld(true)}
+            className="relative flex items-center gap-2 px-3 py-2 bg-amber-50 border border-amber-200 text-amber-700 rounded-xl text-xs font-black">
+            ⏸ Held List
+            {heldOrders.length > 0 && (
+              <span className="absolute -top-1 -right-1 w-4 h-4 bg-amber-500 text-white text-[9px] font-black rounded-full flex items-center justify-center">
+                {heldOrders.length}
+              </span>
+            )}
+          </button>
+
+          <button onClick={handleNewSale}
+            className="px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-black uppercase">
+            F2 New Sale
+          </button>
+
+          <div className="flex items-center gap-1.5 text-xs font-semibold text-slate-400">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+            Live
+          </div>
         </div>
       </header>
 
-      <main className="max-w-[1600px] mx-auto p-6 lg:p-8 grid grid-cols-12 gap-6">
-        <div className="col-span-12 lg:col-span-8 flex flex-col gap-5">
+      {/* ── Main ── */}
+      <main className="max-w-[1600px] mx-auto p-4 lg:p-6 grid grid-cols-12 gap-5">
+        <div className="col-span-12 lg:col-span-8 flex flex-col gap-4">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <CustomerSearch
               selectedCustomer={selectedCustomer}
@@ -308,25 +442,34 @@ const handleScan = async (e) => {
             <ProductScanner
               barcode={barcode}
               setBarcode={setBarcode}
-              handleScan={handleScan} // FIXED: handlescan পাস হচ্ছে
+              handleScan={handleScan}
               barcodeRef={barcodeRef}
               searchQuery={searchQuery}
               setSearchQuery={setSearchQuery}
               searchOpen={searchOpen}
               searchLoading={searchLoading}
               searchResults={searchResults}
+              addToCart={addToCart}
               setSearchOpen={setSearchOpen}
               playBeep={playBeep}
               formatBDT={formatBDT}
-              onSelectProduct={handleSelectProduct} // FIXED: handleSelectProduct পাস হচ্ছে
+              onSelectProduct={(p) => {
+                addToCart(p);
+                setSearchOpen(false);
+                setSearchQuery("");
+                playBeep();
+              }}     
             />
           </div>
 
-          {!selectedCustomer && <QuickRegister onRegisterSuccess={handleQuickRegisterSuccess} />}
+          {!selectedCustomer && (
+            <QuickRegister onRegisterSuccess={handleQuickRegisterSuccess} />
+          )}
 
           <CartTable
             cart={cart}
             getEffectivePrice={getEffectivePrice}
+            getMemberSavingPerItem={getMemberSavingPerItem}
             updateQuantity={updateQuantity}
             removeFromCart={removeFromCart}
             clearCart={clearCart}
@@ -338,8 +481,22 @@ const handleScan = async (e) => {
         <div className="col-span-12 lg:col-span-4">
           <OrderSummary
             selectedCustomer={selectedCustomer}
-            dynamicSubtotal={dynamicSubtotal}
+            subtotal={subtotal}
+            totalMemberSavings={totalMemberSavings}
+            discountType={discountType}
+            setDiscountType={setDiscountType}
+            discountValue={discountValue}
+            setDiscountValue={setDiscountValue}
+            discountAmount={discountAmount}
+            exchangeCredit={exchangeCredit}
+            onClearExchange={clearExchange}
+            payable={payable}
+            cashTendered={cashTendered}
+            setCashTendered={setCashTendered}
+            tendered={tendered}
+            changeAmount={changeAmount}
             handleCheckout={handleCheckout}
+            holdOrder={holdOrder}
             isSubmitting={isSubmitting}
             formatBDT={formatBDT}
             cartLength={cart.length}
@@ -347,15 +504,32 @@ const handleScan = async (e) => {
         </div>
       </main>
 
-      <div style={{ display: "none" }}>
+      {/* ── Held Orders Modal ── */}
+      {showHeld && (
+        <HeldOrders
+          orders={heldOrders}
+          onRestore={restoreHeld}
+          onDelete={(id) => dispatch({ type: "DELETE", id })}
+          onClose={() => setShowHeld(false)}
+          formatBDT={formatBDT}
+        />
+      )}
+
+      {/* ── Hidden Invoice for Printing ── */}
+      <div style={{ position: "absolute", top: "-9999px", left: "-9999px", visibility: "hidden" }}>
         <div ref={invoiceRef}>
           <ThermalInvoice
             orderData={lastOrder}
             cart={printCart}
             customer={selectedCustomer}
-            subtotal={dynamicSubtotal}
+            meta={printMeta}
             formatBDT={formatBDT}
-            getEffectivePrice={getEffectivePrice}
+            getEffectivePrice={(item) => {
+              const base = parseFloat(item.price || 0);
+              const pv   = parseFloat(item.point_value || 0);
+              const active = printMeta?.customerStatus?.toLowerCase() === "active";
+              return active ? base - pv * 2 : base;
+            }}
           />
         </div>
       </div>

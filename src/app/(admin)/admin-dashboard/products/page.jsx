@@ -148,6 +148,11 @@ export default function ManageProducts() {
   return (
     <div className="space-y-6">
       <Toaster position="top-right" />
+         <div style={{ position: "absolute", top: "-9999px", left: "-9999px", visibility: "hidden" }}>
+        <div ref={barcodePrintRef}>
+          <BarcodeSlip product={printProduct} />
+        </div>
+      </div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -346,6 +351,7 @@ export default function ManageProducts() {
             </tbody>
           </table>
         </div>
+        
       </div>
 
       {/* Modals */}

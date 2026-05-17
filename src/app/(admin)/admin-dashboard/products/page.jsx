@@ -17,60 +17,53 @@ import InventoryPDFButton from "./InventoryPDFButton";
 // Barcode slip — এটাই print হবে
 // ────────────────────────────────────────────────
 function BarcodeSlip({ product }) {
-  if (!product) return <div style={{ width: "50mm" }} />;
+  if (!product) return null;
   return (
     <div
       style={{
-        width: "50mm",
-        padding: "1.5mm 2mm",
-        fontFamily: "Arial, sans-serif",
+        width: "100%", 
+        height: "100%", // পুরো স্টিকারের উচ্চতা নিবে
+        padding: "1mm 2mm",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
-        gap: 0,
+        justifyContent: "space-between", // উপর-নিচ সমানভাবে ছড়াবে
         boxSizing: "border-box",
       }}
     >
-      {/* Product name */}
-      <p style={{
-        fontSize: "7pt",
-        fontWeight: "bold",
-        textAlign: "center",
-        margin: "0 0 1mm 0",
-        lineHeight: "1.2",
-        wordBreak: "break-word",
-        width: "100%",
-      }}>
-        {product.name}
-      </p>
+      <div style={{ textAlign: "center", width: "100%" }}>
+        <p style={{ 
+          fontSize: "10pt", 
+          fontWeight: "bold", 
+          margin: "0 0 1mm 0", 
+          lineHeight: "1",
+          wordBreak: "break-all"
+        }}>
+          {product.name}
+        </p>
+        <p style={{ fontSize: "9pt", fontWeight: "bold", margin: 0 }}>
+          Price: ৳{Math.floor(Number(product.price))}
+        </p>
+      </div>
 
-      {/* Price */}
-      <p style={{
-        fontSize: "7pt",
-        fontWeight: "bold",
-        margin: "0 0 1mm 0",
-        lineHeight: "1",
-        textAlign: "center",
-      }}>
-        Price: {String.fromCharCode(2547)}{Math.floor(Number(product.price))}
-      </p>
-
-      {/* Barcode image — full width, no constraint */}
-      <img
-        src={product.barcode_image}
-        alt="barcode"
-        style={{
-          width: "100%",       /* পুরো slip width নেবে */
-          height: "14mm",      /* barcode এর actual height */
-          objectFit: "fill",   /* stretch করবে যাতে পুরো জায়গা fill হয় */
-          display: "block",
-          margin: 0,
-        }}
-      />
+      <div style={{ width: "100%", display: "flex", flexDirection: "column", alignItems: "center" }}>
+        <img
+          src={product.barcode_image}
+          alt="barcode"
+          style={{ 
+            width: "95%", 
+            height: "12mm", // বারকোড বড় করার জন্য
+            objectFit: "fill",
+            display: "block"
+          }}
+        />
+        <p style={{ fontSize: "8pt", fontFamily: "monospace", margin: "1mm 0 0 0" }}>
+          {product.barcode_number}
+        </p>
+      </div>
     </div>
   );
 }
-
 // ────────────────────────────────────────────────
 // Main Component
 // ────────────────────────────────────────────────
@@ -88,17 +81,17 @@ export default function ManageProducts() {
   const barcodePrintRef = useRef();
 
   // useReactToPrint — onAfterPrint এ cleanup
-  const handlePrint = useReactToPrint({
+ const handlePrint = useReactToPrint({
     contentRef: barcodePrintRef,
     pageStyle: `
       @page {
-        size: 50mm 25mm;
+        size: 38mm 25mm landscape; /* landscape দিলে রোটেশন ঠিক হওয়ার কথা */
         margin: 0;
       }
       @media print {
         html, body {
-          width: 50mm;
           height: 25mm;
+          width: 38mm;
           margin: 0 !important;
           padding: 0 !important;
           overflow: hidden;
@@ -182,11 +175,16 @@ export default function ManageProducts() {
       <Toaster position="top-right" />
 
       {/* Hidden print area */}
-      <div style={{ overflow: "hidden", height: 0, width: 0 }}>
-        <div ref={barcodePrintRef}>
-          <BarcodeSlip product={printProduct} />
-        </div>
-      </div>
+<div style={{ 
+  position: "fixed",
+  top: "-9999px",
+  left: "-9999px",
+  width: "50mm"
+}}>
+  <div ref={barcodePrintRef}>
+    <BarcodeSlip product={printProduct} />
+  </div>
+</div>
 
       {/* Header */}
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">

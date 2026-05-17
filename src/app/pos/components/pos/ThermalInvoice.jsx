@@ -29,181 +29,182 @@ const ThermalInvoice = React.forwardRef(({
     : null;
 
   return (
-    <div 
-      ref={ref} 
-      className="w-[80mm] bg-white text-black font-mono text-[11px] leading-relaxed p-4 selection:bg-transparent print:w-[80mm] print:p-4 print:mx-auto"
-      style={{ WebkitPrintColorAdjust: "exact", printColorAdjust: "exact" }}
+    <div
+      ref={ref}
+      style={{
+        fontFamily: "Arial, 'Helvetica Neue', sans-serif",
+        width: "80mm",
+        background: "#fff",
+        color: "#000",
+        fontSize: "11px",
+        lineHeight: "1.5",
+        padding: "6mm 4mm",
+        WebkitPrintColorAdjust: "exact",
+        printColorAdjust: "exact",
+      }}
     >
-      {/* ── Store Header ── */}
-      <div className="text-center mb-2.5 text-black">
-        <div className="text-[16px] font-black uppercase tracking-wider text-black">
+      {/* Store Header */}
+      <div style={{ textAlign: "center", marginBottom: "8px" }}>
+        <div style={{ fontSize: "16px", fontWeight: 900, textTransform: "uppercase", letterSpacing: "0.04em" }}>
           Sofol Bangla Shop
         </div>
-        <div className="text-[9.5px] font-bold text-black">
-          Road-12, Sector-07, Uttara, Dhaka
-        </div>
-        <div className="text-[9.5px] font-bold text-black">
-          Phone: 017XXXXXXXX
-        </div>
-        <div className="border-t border-dashed border-black my-1.5" />
-        <div className="text-[12px] font-black tracking-widest text-black">
-          CASH MEMO
-        </div>
+        <div style={{ fontSize: "9.5px", fontWeight: "bold" }}>Road-12, Sector-07, Uttara, Dhaka</div>
+        <div style={{ fontSize: "9.5px", fontWeight: "bold" }}>Phone: 017XXXXXXXX</div>
+        <div style={{ borderTop: "1px dashed #000", margin: "5px 0" }} />
+        <div style={{ fontSize: "12px", fontWeight: 900, letterSpacing: "0.1em" }}>CASH MEMO</div>
       </div>
 
-      {/* ── Order Info ── */}
-      <div className="mb-1 flex flex-col gap-0.5 text-[10px] font-bold text-black">
-        <div className="flex justify-between text-black">
-          <span className="text-black">Order #: {orderData.id || orderData.order_id}</span>
-          <span className="text-black">{now.toLocaleDateString("en-BD")}</span>
+      {/* Order Info */}
+      <div style={{ marginBottom: "4px", fontSize: "10px", fontWeight: "bold" }}>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Order #: {orderData.id || orderData.order_id}</span>
+          <span>{now.toLocaleDateString("en-GB")}</span>
         </div>
-        <div className="flex justify-between text-black">
-          <span className="text-black">Time: {now.toLocaleTimeString("en-BD", { hour: "2-digit", minute: "2-digit" })}</span>
-          <span className="text-black">{customer?.status?.toUpperCase()}</span>
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
+          <span>Time: {now.toLocaleTimeString("en-GB", { hour: "2-digit", minute: "2-digit" })}</span>
+          <span>{customer?.status?.toUpperCase()}</span>
         </div>
-        <div className="text-black">
-          Customer: {customer?.name || customer?.username || "Guest"}
-        </div>
-        {customer?.phone && (
-          <div className="text-black">Phone: {customer.phone}</div>
-        )}
+        <div>Customer: {customer?.name || customer?.username || "Guest"}</div>
+        {customer?.phone && <div>Phone: {customer.phone}</div>}
       </div>
 
-      <div className="border-t border-dashed border-black my-1.5" />
+      <div style={{ borderTop: "1px dashed #000", margin: "5px 0" }} />
 
-      {/* ── Table Header ── */}
-      <div className="flex text-[10px] font-black text-black mb-0.5">
-        <div className="flex-1 pr-1 text-black">ITEM</div>
-        <div className="w-[22px] text-center text-black shrink-0">QTY</div>
-        <div className="w-[38px] text-right text-black shrink-0">RATE</div>
-        <div className="w-[44px] text-right text-black shrink-0">AMT</div>
+      {/* Table Header */}
+      <div style={{ display: "flex", fontSize: "10px", fontWeight: 900, marginBottom: "3px" }}>
+        <div style={{ flex: 1, paddingRight: "3px" }}>ITEM</div>
+        <div style={{ width: "22px", textAlign: "center", flexShrink: 0 }}>QTY</div>
+        <div style={{ width: "38px", textAlign: "right", flexShrink: 0 }}>RATE</div>
+        <div style={{ width: "44px", textAlign: "right", flexShrink: 0 }}>AMT</div>
       </div>
-      
-      <div className="border-t border-dashed border-black my-1.5" />
 
-      {/* ── Line Items ── */}
-      <div className="flex flex-col gap-1 text-black">
+      <div style={{ borderTop: "1px dashed #000", margin: "5px 0" }} />
+
+      {/* Line Items */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "4px" }}>
         {cart.map((item, idx) => {
-          const unitPrice  = getEffectivePrice ? getEffectivePrice(item) : Number(item.price || 0);
-          const itemTotal  = unitPrice * item.quantity;
-          const origPrice  = Number(item.price || 0);
-          const hasDisc    = customer?.status?.toLowerCase() === "active" && unitPrice < origPrice;
+          const unitPrice = getEffectivePrice ? getEffectivePrice(item) : Number(item.price || 0);
+          const itemTotal = unitPrice * item.quantity;
+          const origPrice = Number(item.price || 0);
+          const hasDisc   = customer?.status?.toLowerCase() === "active" && unitPrice < origPrice;
 
           return (
-            <div key={idx} className="flex text-[10px] font-bold text-black items-start">
-              <div className="flex-1 pr-1 break-all text-black">
-                <span className="text-black">{item.name}</span>
+            <div key={idx} style={{ display: "flex", fontSize: "10px", fontWeight: "bold", alignItems: "flex-start" }}>
+              <div style={{ flex: 1, paddingRight: "3px", wordBreak: "break-word" }}>
+                <span>{item.name}</span>
                 {hasDisc && (
-                  <span className="block text-[8px] font-black mt-0.5 text-black">
+                  <span style={{ display: "block", fontSize: "8px", fontWeight: 900, marginTop: "1px", fontStyle: "italic" }}>
                     MRP: {Number(origPrice).toFixed(0)} | Disc: {(origPrice - unitPrice).toFixed(0)} off
                   </span>
                 )}
               </div>
-              <div className="w-[22px] text-center text-black shrink-0">{item.quantity}</div>
-              <div className="w-[38px] text-right text-black shrink-0">{Number(unitPrice).toFixed(0)}</div>
-              <div className="w-[44px] text-right font-black text-black shrink-0">{Number(itemTotal).toFixed(0)}</div>
+              <div style={{ width: "22px", textAlign: "center", flexShrink: 0 }}>{item.quantity}</div>
+              <div style={{ width: "38px", textAlign: "right", flexShrink: 0 }}>{Number(unitPrice).toFixed(0)}</div>
+              <div style={{ width: "44px", textAlign: "right", fontWeight: 900, flexShrink: 0 }}>{Number(itemTotal).toFixed(0)}</div>
             </div>
           );
         })}
       </div>
 
-      <div className="border-t border-dashed border-black mt-2 mb-1.5" />
+      <div style={{ borderTop: "1px dashed #000", margin: "8px 0 5px" }} />
 
-      {/* ── Totals ── */}
-      <div className="flex flex-col gap-1 text-[10.5px] font-bold text-black">
-        {/* MRP subtotal */}
+      {/* Totals */}
+      <div style={{ display: "flex", flexDirection: "column", gap: "3px", fontSize: "10.5px", fontWeight: "bold" }}>
         {meta.totalMemberSavings > 0 && (
-          <div className="flex justify-between text-[9.5px] text-black font-black">
-            <span>MRP Total:</span>
-            <span>{formatBDT(subtotal + (meta.totalMemberSavings || 0))}</span>
-          </div>
+          <>
+            <div style={{ display: "flex", justifyContent: "space-between", fontSize: "9.5px", fontWeight: 900 }}>
+              <span>MRP Total:</span>
+              <span>{formatBDT(subtotal + (meta.totalMemberSavings || 0))}</span>
+            </div>
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900 }}>
+              <span>* Member Discount:</span>
+              <span>- {formatBDT(meta.totalMemberSavings)}</span>
+            </div>
+          </>
         )}
 
-        {/* Member discount */}
-        {meta.totalMemberSavings > 0 && (
-          <div className="flex justify-between font-black text-black">
-            <span>★ Member Discount:</span>
-            <span>- {formatBDT(meta.totalMemberSavings)}</span>
-          </div>
-        )}
-
-        <div className="flex justify-between text-black">
+        <div style={{ display: "flex", justifyContent: "space-between" }}>
           <span>Subtotal:</span>
           <span>{formatBDT(subtotal)}</span>
         </div>
 
-        {/* Manual discount */}
         {discountAmount > 0 && (
-          <div className="flex justify-between font-black text-black">
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900 }}>
             <span>{discountLabel}:</span>
             <span>- {formatBDT(discountAmount)}</span>
           </div>
         )}
 
-        {/* Grand Total */}
-        <div className="flex justify-between font-black text-[14px] border-t-2 border-b border-black my-1 py-1 text-black">
+        <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: "14px", borderTop: "2px solid #000", borderBottom: "1px solid #000", margin: "4px 0", padding: "3px 0" }}>
           <span>NET PAYABLE</span>
           <span>{formatBDT(payable)}</span>
         </div>
 
         {cashTendered > 0 && (
           <>
-            <div className="flex justify-between text-black">
+            <div style={{ display: "flex", justifyContent: "space-between" }}>
               <span>Cash Received:</span>
               <span>{formatBDT(cashTendered)}</span>
             </div>
-            <div className="flex justify-between font-black text-black">
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900 }}>
               <span>Change:</span>
               <span>{formatBDT(changeAmount)}</span>
             </div>
           </>
         )}
 
-        <div className="flex justify-between text-[10px] mt-0.5 text-black">
+        <div style={{ display: "flex", justifyContent: "space-between", fontSize: "10px", marginTop: "2px" }}>
           <span>Payment:</span>
           <span>{(orderData.payment_method || "CASH").toUpperCase()}</span>
         </div>
       </div>
 
-      {/* ── Savings summary ── */}
+      {/* Savings summary */}
       {(meta.totalMemberSavings > 0 || discountAmount > 0) && (
-        <div className="border border-black mt-2.5 p-1 text-black">
-          <div className="font-black text-center mb-0.5 text-black">
-            🎁 আপনি সাশ্রয় করেছেন
+        <div style={{ border: "1px solid #000", marginTop: "8px", padding: "5px" }}>
+          <div style={{ fontWeight: 900, textAlign: "center", marginBottom: "3px" }}>
+            You Saved Today!
           </div>
           {meta.totalMemberSavings > 0 && (
-            <div className="flex justify-between font-bold text-black">
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Member Discount:</span>
               <span>{formatBDT(meta.totalMemberSavings)}</span>
             </div>
           )}
           {discountAmount > 0 && (
-            <div className="flex justify-between font-bold text-black">
+            <div style={{ display: "flex", justifyContent: "space-between", fontWeight: "bold" }}>
               <span>Special Discount:</span>
               <span>{formatBDT(discountAmount)}</span>
             </div>
           )}
-          <div className="flex justify-between font-black text-[12px] border-t border-dashed border-black mt-1 pt-1 text-black">
+          <div style={{ display: "flex", justifyContent: "space-between", fontWeight: 900, fontSize: "12px", borderTop: "1px dashed #000", marginTop: "4px", paddingTop: "4px" }}>
             <span>TOTAL SAVINGS:</span>
             <span>{formatBDT((meta.totalMemberSavings || 0) + discountAmount)}</span>
           </div>
         </div>
       )}
 
-      {/* ── Points earned ── */}
+      {/* Points earned */}
       {Number(orderData.added_points) > 0 && (
-        <div className="mt-2 text-center border border-black border-dashed rounded-[2px] p-1 text-[10px] font-black text-black">
-          🎯 Points Earned: +{Number(orderData.added_points).toFixed(0)} PV
+        <div style={{ marginTop: "8px", textAlign: "center", border: "1px dashed #000", padding: "4px", fontSize: "10px", fontWeight: 900 }}>
+          Points Earned: +{Number(orderData.added_points).toFixed(0)} PV
         </div>
       )}
 
-      {/* ── Footer ── */}
-      <div className="text-center mt-2 text-black">
-        <div className="border-t border-dashed border-black mt-2 mb-1.5" />
-        <div className="text-[12px] font-black text-black">ধন্যবাদ! আবার আসবেন</div>
-        <div className="text-[9px] mt-0.5 font-black text-black">পণ্য বিক্রয়ের পরে ফেরত নেওয়া হয় না।</div>
-        <div className="text-[8px] mt-1 font-bold text-black">Sofol Bangla — sofolbangla.com</div>
+      {/* Footer — বাংলা সরানো হয়েছে, English করা হয়েছে */}
+      <div style={{ textAlign: "center", marginTop: "10px" }}>
+        <div style={{ borderTop: "1px dashed #000", marginBottom: "6px" }} />
+        <div style={{ fontSize: "13px", fontWeight: 900 }}>Thank You! Please Visit Again</div>
+        <div style={{ fontSize: "9px", marginTop: "2px", fontWeight: "bold" }}>Goods once sold are not returnable.</div>
+        <div style={{ fontSize: "8px", marginTop: "5px", fontStyle: "italic", opacity: 0.5 }}>Sofol Bangla — sofolbangla.com</div>
       </div>
+
+      <style dangerouslySetInnerHTML={{ __html: `
+        @media print {
+          @page { size: 80mm auto; margin: 0; }
+          body { margin: 0; padding: 0; background: #fff; }
+        }
+      ` }} />
     </div>
   );
 });

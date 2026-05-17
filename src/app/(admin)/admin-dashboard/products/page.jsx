@@ -17,29 +17,55 @@ import InventoryPDFButton from "./InventoryPDFButton";
 // Barcode slip — এটাই print হবে
 // ────────────────────────────────────────────────
 function BarcodeSlip({ product }) {
-  if (!product) return null;
+  if (!product) return <div style={{ width: "50mm" }} />;
   return (
     <div
       style={{
         width: "50mm",
-        padding: "1mm 2mm",
-        fontFamily: "monospace",
+        padding: "1.5mm 2mm",
+        fontFamily: "Arial, sans-serif",
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
         gap: 0,
+        boxSizing: "border-box",
       }}
     >
-      <p style={{ fontSize: "6pt", fontWeight: "bold", textAlign: "center", margin: 0, lineHeight: "1.2", wordBreak: "break-word", width: "100%" }}>
+      {/* Product name */}
+      <p style={{
+        fontSize: "7pt",
+        fontWeight: "bold",
+        textAlign: "center",
+        margin: "0 0 1mm 0",
+        lineHeight: "1.2",
+        wordBreak: "break-word",
+        width: "100%",
+      }}>
         {product.name}
       </p>
-      <p style={{ fontSize: "6pt", margin: "0.5mm 0 0.5mm 0", lineHeight: "1", textAlign: "center" }}>
-        Price: ৳{Math.floor(Number(product.price))}
+
+      {/* Price */}
+      <p style={{
+        fontSize: "7pt",
+        fontWeight: "bold",
+        margin: "0 0 1mm 0",
+        lineHeight: "1",
+        textAlign: "center",
+      }}>
+        Price: {String.fromCharCode(2547)}{Math.floor(Number(product.price))}
       </p>
+
+      {/* Barcode image — full width, no constraint */}
       <img
         src={product.barcode_image}
         alt="barcode"
-        style={{ width: "70%", height: "auto", maxHeight: "10mm", objectFit: "contain", display: "block", margin: 0 }}
+        style={{
+          width: "100%",       /* পুরো slip width নেবে */
+          height: "14mm",      /* barcode এর actual height */
+          objectFit: "fill",   /* stretch করবে যাতে পুরো জায়গা fill হয় */
+          display: "block",
+          margin: 0,
+        }}
       />
     </div>
   );
@@ -66,11 +92,17 @@ export default function ManageProducts() {
     contentRef: barcodePrintRef,
     pageStyle: `
       @page {
-        size: 50mm auto;   /* slip width, height auto */
+        size: 50mm 25mm;
         margin: 0;
       }
       @media print {
-        body { margin: 0; }
+        html, body {
+          width: 50mm;
+          height: 25mm;
+          margin: 0 !important;
+          padding: 0 !important;
+          overflow: hidden;
+        }
       }
     `,
     onAfterPrint: () => setPrintProduct(null),
@@ -81,7 +113,7 @@ export default function ManageProducts() {
   useEffect(() => {
     if (printProduct) {
       // একটু wait করি যেন BarcodeSlip DOM এ render হয়
-      const timer = setTimeout(() => handlePrint(), 150);
+      const timer = setTimeout(() => handlePrint(), 300);
       return () => clearTimeout(timer);
     }
   }, [printProduct]);
@@ -148,7 +180,9 @@ export default function ManageProducts() {
   return (
     <div className="space-y-6">
       <Toaster position="top-right" />
-         <div style={{ position: "absolute", top: "-9999px", left: "-9999px", visibility: "hidden" }}>
+
+      {/* Hidden print area */}
+      <div style={{ overflow: "hidden", height: 0, width: 0 }}>
         <div ref={barcodePrintRef}>
           <BarcodeSlip product={printProduct} />
         </div>
@@ -351,7 +385,6 @@ export default function ManageProducts() {
             </tbody>
           </table>
         </div>
-        
       </div>
 
       {/* Modals */}
